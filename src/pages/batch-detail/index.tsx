@@ -13,11 +13,11 @@ export default function BatchDetailPage() {
   const paramBatch = ((router.params.batchNo as string) || '').trim();
 
   const store = useTraceStore();
-  const arrivals = store.arrivals;
-  const allSamplings = store.samplings;
-  const allInspections = store.inspections;
-  const allInstalls = store.installRecords;
-  const allRects = store.rectifications;
+  const arrivals = store.arrivals || [];
+  const allSamplings = store.samplings || [];
+  const allInspections = store.inspections || [];
+  const allInstalls = store.installs || (store as any).installRecords || [];
+  const allRects = store.rectifications || [];
 
   const allBatchNos = useMemo(() => [...new Set(arrivals.map(a => a.batchNo))], [arrivals]);
 
@@ -34,7 +34,7 @@ export default function BatchDetailPage() {
     arrival ? allInspections.filter(i => i.arrivalId === arrival.id) : []
   , [allInspections, arrival]);
   const relatedInstalls = useMemo(() =>
-    allInstalls.filter(rec => rec.materials.some(m => m.batchNo === batchNo))
+    allInstalls.filter(rec => (rec.materials || []).some(m => m.batchNo === batchNo))
   , [allInstalls, batchNo]);
   const relatedRects = useMemo(() =>
     allRects.filter(r => r.sourceBatchNo === batchNo)
@@ -45,10 +45,10 @@ export default function BatchDetailPage() {
   const hasRect = relatedRects.length > 0;
 
   const totalQty = relatedInstalls.reduce((s, r) => {
-    const found = r.materials.find(m => m.batchNo === batchNo);
-    return s + (found ? found.quantity : 0);
+    const found = (r.materials || []).find(m => m.batchNo === batchNo);
+    return s + (found ? (found.quantity || 0) : 0);
   }, 0);
-  const totalUnit = arrival?.unit || '';
+  const totalUnit = arrival?.unit || '批';
 
   const findBatchByKeyword = (kw: string): string | null => {
     if (!kw) return null;
@@ -194,7 +194,7 @@ export default function BatchDetailPage() {
     );
   }
 
-  const asm = ARRIVAL_STATUS[arrival.status] || { label: '未知', type: 'info' as const };
+  const asm = ARRIVAL_STATUS[arrival?.status || 'pending'] || ARRIVAL_STATUS.pending;
 
   return (
     <View className='pageContainer' style={{ paddingBottom: 180 }}>
@@ -254,11 +254,11 @@ export default function BatchDetailPage() {
           <StatusTag text={asm.label} type={asm.type as any} size='sm' />
         </View>
         <Text className={styles.batchNo}>{arrival.batchNo}</Text>
-        <Text className={styles.batchMatName}>{arrival.materialName} · {arrival.spec}</Text>
+        <Text className={styles.batchMatName}>{arrival.materialName || '材料'} · {arrival.spec || '规格'}</Text>
         <View className={styles.batchStats}>
           <View className={styles.statCol}>
-            <Text className={styles.statVal}>{arrival.quantity}</Text>
-            <Text className={styles.statLbl}>到货总量 {arrival.unit}</Text>
+            <Text className={styles.statVal}>{arrival.quantity || 0}</Text>
+            <Text className={styles.statLbl}>到货总量 {arrival.unit || '批'}</Text>
           </View>
           <View className={styles.statCol}>
             <Text className={styles.statVal} style={{
@@ -314,17 +314,17 @@ export default function BatchDetailPage() {
           <View className={styles.tlContent}>
             <View className={styles.tlHeader}>
               <Text className={styles.tlName}>📦 到货验收</Text>
-              <Text className={styles.tlTime}>{arrival.arrivalTime}</Text>
+              <Text className={styles.tlTime}>{arrival.arrivalTime || '---'}</Text>
             </View>
             <View className={styles.tlBody}>
               {[
-                ['到货单号', arrival.id],
-                ['供应商', arrival.supplier],
-                ['规格', arrival.spec],
-                ['数量', `${arrival.quantity}${arrival.unit}`],
-                ['验收人 / 监理', `${arrival.receiver} / ${arrival.witness || '待签字'}`],
+                ['到货单号', arrival.id || '—'],
+                ['供应商', arrival.supplier || arrival.supplierName || '供应商'],
+                ['规格', arrival.spec || '—'],
+                ['数量', `${arrival.quantity || 0}${arrival.unit || '批'}`],
+                ['验收人 / 监理', `${arrival.receiver || '待验收'} / ${arrival.witness || '待签字'}`],
                 ['运输车辆', arrival.vehicleNo || '—'],
-                ['规格核对', arrival.specMatched ? '✅ 与合同一致' : '❌ 不一致'],
+                ['规格核对', arrival.specMatched ? '✅ 与合同一致' : (arrival.specMatched === false ? '❌ 不一致' : '⏳ 待核对')],
               ].map(([k, v]) => (
                 <View key={k} className={styles.tlRow}>
                   <Text className={styles.tlKey}>{k}</Text>
@@ -366,13 +366,13 @@ export default function BatchDetailPage() {
                   return (
                     <View key={s.id} className={styles.samplingCard}>
                       <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <Text style={{ fontWeight: 600, fontSize: 24 }}>组{idx + 1} · {s.samplingNo}</Text>
+                        <Text style={{ fontWeight: 600, fontSize: 24 }}>组{idx + 1} · {s.samplingNo || '未编号'}</Text>
                         <StatusTag text={stepLabel(step)} type={step >= 5 ? 'success' : (step >= 2 ? 'primary' : 'warning')} size='sm' />
                       </View>
                       <View style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 22, color: '#4E5969', marginBottom: 8 }}>
-                        <Text>👁️ 见证人：{s.witnessName}</Text>
-                        <Text>📐 {s.quantity}{s.unit}</Text>
-                        <Text>🏛️ {s.labName || '—'}</Text>
+                        <Text>👁️ 见证人：{s.witnessName || '待指定'}</Text>
+                        <Text>📐 {s.quantity || 0}{s.unit || '组'}</Text>
+                        <Text>🏛️ {s.labName || '待送检'}</Text>
                       </View>
                       <View style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                         {SAMPLING_STEP_LABELS.map((lbl, i) => (
@@ -409,15 +409,15 @@ export default function BatchDetailPage() {
                 <Text style={{ fontSize: 24, color: '#86909C', padding: '12rpx 0' }}>⏳ 等待实验室出具检测报告</Text>
               ) : (
                 relatedInspections.map(i => {
-                  const cm = INSPECTION_CONCLUSION_MAP[i.conclusion] || { label: '未知', type: 'info' as const };
+                  const cm = INSPECTION_CONCLUSION_MAP[i.conclusion] || { label: '检测中', type: 'info' as const };
                   return (
                     <View key={i.id} className={styles.samplingCard}>
                       <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                        <Text style={{ fontWeight: 600, fontSize: 24 }}>{i.reportNo}</Text>
+                        <Text style={{ fontWeight: 600, fontSize: 24 }}>{i.reportNo || '未出报告'}</Text>
                         <StatusTag text={cm.label} type={cm.type as any} size='sm' />
                       </View>
                       <View style={{ fontSize: 22, color: '#4E5969', lineHeight: 1.8 }}>
-                        <Text>📅 {i.reportDate} · 🏛️ {i.labName}</Text>
+                        <Text>📅 {i.reportDate || '待出具'} · 🏛️ {i.labName || '指定实验室'}</Text>
                         {i.unqualifiedItems && i.unqualifiedItems.length > 0 && (
                           <Text style={{ color: '#F53F3F' }}>
                             {'\n'}⚠️ 不合格项：{i.unqualifiedItems.join('、')}
@@ -447,20 +447,20 @@ export default function BatchDetailPage() {
                 <Text style={{ fontSize: 24, color: '#86909C', padding: '12rpx 0' }}>⏳ 尚未分配安装位置，检测合格后可登记</Text>
               ) : (
                 relatedInstalls.map(r => {
-                  const m = r.materials.find(x => x.batchNo === batchNo);
+                  const m = (r.materials || []).find(x => x.batchNo === batchNo);
                   return (
                     <View key={r.id} className={styles.samplingCard}>
                       <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <View style={{ flex: 1, minWidth: 0 }}>
                           <Text style={{ fontWeight: 600, fontSize: 24, display: 'block', marginBottom: 4 }}>
-                            🏢 {r.building} {r.floor} · {r.componentName}
+                            🏢 {r.building || '未分配'} {r.floor || ''} · {r.componentName || '构件'}
                           </Text>
                           <Text style={{ fontSize: 22, color: '#4E5969', lineHeight: 1.6, display: 'block' }}>
-                            👷 班组：{r.teamName} · {r.teamLeader || ''}
+                            👷 班组：{r.teamName || '施工班组'} · {r.teamLeader || ''}
                           </Text>
                           {m && (
                             <Text style={{ fontSize: 22, color: '#1E6FFF', display: 'block', marginTop: 2 }}>
-                              📦 用料：{m.materialName} · {m.quantity}{m.unit}
+                              📦 用料：{m.materialName || '材料'} · {m.quantity || 0}{m.unit || '批'}
                             </Text>
                           )}
                         </View>
@@ -493,21 +493,21 @@ export default function BatchDetailPage() {
                 <Text style={{ fontSize: 24, color: '#00B42A', padding: '12rpx 0' }}>✅ 批次合格，无整改记录</Text>
               ) : (
                 relatedRects.map(r => {
-                  const rsm = RECTIFICATION_STATUS_MAP[r.status];
-                  const prm = RECTIFICATION_PRIORITY_MAP[r.priority];
+                  const rsm = RECTIFICATION_STATUS_MAP[r.status] || { label: '未知', type: 'info' as const };
+                  const prm = RECTIFICATION_PRIORITY_MAP[r.priority] || { label: '普通', color: '#4E5969', bg: '#F2F3F5' };
                   return (
                     <View key={r.id} className={styles.samplingCard}>
                       <View style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
-                        <Text style={{ fontWeight: 600, fontSize: 24 }}>🔧 {r.rectNo}</Text>
+                        <Text style={{ fontWeight: 600, fontSize: 24 }}>🔧 {r.rectNo || '未编号'}</Text>
                         <View style={{ padding: '2rpx 10rpx', borderRadius: 8, background: prm.bg, color: prm.color, fontSize: 20 }}>{prm.label}</View>
                         <StatusTag text={rsm.label} type={rsm.type as any} size='sm' />
                       </View>
                       <Text style={{ fontSize: 22, color: '#4E5969', lineHeight: 1.6, display: 'block', marginBottom: 6 }}>
-                        📝 {r.description}
+                        📝 {r.description || '无描述'}
                       </Text>
                       {r.timeline && r.timeline.slice(-1)[0] && (
                         <Text style={{ fontSize: 20, color: '#86909C' }}>
-                          最新：{r.timeline[r.timeline.length - 1].action} · {r.timeline[r.timeline.length - 1].operator} · {r.timeline[r.timeline.length - 1].time}
+                          最新：{r.timeline[r.timeline.length - 1].action || '—'} · {r.timeline[r.timeline.length - 1].operator || '—'} · {r.timeline[r.timeline.length - 1].time || '—'}
                         </Text>
                       )}
                     </View>

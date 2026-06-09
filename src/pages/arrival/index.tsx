@@ -30,7 +30,7 @@ export default function ArrivalPage() {
     setTick(t => t + 1);
   });
 
-  const projectArrivals = store.getArrivalsByProject(currentProjectId);
+  const projectArrivals = store.getArrivalsByProject?.(currentProjectId) || store.arrivals || [];
 
   const filteredList = useMemo(() => {
     return projectArrivals.filter(a => {
@@ -39,9 +39,9 @@ export default function ArrivalPage() {
       if (searchText) {
         const kw = searchText.toLowerCase();
         return (
-          a.materialName.toLowerCase().includes(kw) ||
-          a.batchNo.toLowerCase().includes(kw) ||
-          a.supplier.toLowerCase().includes(kw)
+          (a.materialName || '').toLowerCase().includes(kw) ||
+          (a.batchNo || '').toLowerCase().includes(kw) ||
+          (a.supplier || a.supplierName || '').toLowerCase().includes(kw)
         );
       }
       return true;
@@ -51,7 +51,7 @@ export default function ArrivalPage() {
   const summary = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
     return {
-      today: projectArrivals.filter(a => a.arrivalTime.startsWith(todayStr) || a.arrivalTime.startsWith('2026-06-10')).length,
+      today: projectArrivals.filter(a => (a.arrivalTime || '').startsWith(todayStr) || (a.arrivalTime || '').startsWith('2026-06-10')).length,
       pending: projectArrivals.filter(a => a.status === 'pending' || a.status === 'accepted').length,
       rejected: projectArrivals.filter(a => a.status === 'rejected').length
     };
@@ -62,12 +62,18 @@ export default function ArrivalPage() {
       onlyFromCamera: false,
       scanType: ['qrCode', 'barCode'],
       success: (res) => {
-        setSearchText(res.result);
-        Taro.showToast({ title: '已识别批号', icon: 'success' });
+        const code = (res.result || '').trim();
+        setSearchText(code);
+        Taro.showToast({ title: `扫码:${code.slice(0, 10)}…`, icon: 'none' });
       },
       fail: () => {
-        setSearchText('GJH');
-        Taro.showToast({ title: '模拟搜索：查找GJH批号', icon: 'none' });
+        Taro.showActionSheet({
+          itemList: ['HC20260610-001（钢筋 HRB400）', 'SN20260610-008（水泥 P·O42.5）', 'HT20260609-015（KP1 烧结砖）', 'DT20260606-017（YJV 电缆）'],
+          success: (r) => {
+            const map = ['HC20260610-001', 'SN20260610-008', 'HT20260609-015', 'DT20260606-017'];
+            setSearchText(map[r.tapIndex]);
+          }
+        });
       }
     });
   };

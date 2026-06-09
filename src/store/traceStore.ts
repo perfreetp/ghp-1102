@@ -78,6 +78,7 @@ interface TraceState {
   updateRectificationStatus: (id: string, status: Rectification['status']) => void;
   approveRectification: (id: string, operator: string, remark?: string) => void;
   rejectRectification: (id: string, operator: string, remark?: string) => void;
+  restartRectification: (id: string, operator: string, remark?: string) => void;
   getRectificationsByProject: (pid: string) => Rectification[];
   getRectificationsByBatch: (batchNo: string) => Rectification[];
   getPendingRectifications: () => Rectification[];
@@ -171,7 +172,7 @@ export const useTraceStore = create<TraceState>((set, get) => ({
           return {
             ...r,
             status: 'approved' as const,
-            timeline: [...r.timeline, {
+            timeline: [...(r.timeline || []), {
               action: '监理确认通过',
               operator,
               time: todayStr(),
@@ -193,12 +194,35 @@ export const useTraceStore = create<TraceState>((set, get) => ({
           if (r.id !== id) return r;
           return {
             ...r,
-            status: 'rejected' as const,
-            timeline: [...r.timeline, {
+            status: 'processing' as const,
+            timeline: [...(r.timeline || []), {
               action: '监理驳回，需重新整改',
               operator,
               time: todayStr(),
               remark: remark || '整改不符合要求，请重新处理后再次提交'
+            }]
+          };
+        })
+      };
+      persistPartial(next);
+      return next;
+    });
+  },
+
+  restartRectification: (id, operator, remark) => {
+    set(s => {
+      const next = {
+        ...s,
+        rectifications: s.rectifications.map(r => {
+          if (r.id !== id) return r;
+          return {
+            ...r,
+            status: 'processing' as const,
+            timeline: [...(r.timeline || []), {
+              action: '重新开始整改',
+              operator,
+              time: todayStr(),
+              remark: remark || '根据监理意见重新组织整改'
             }]
           };
         })

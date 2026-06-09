@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, Input } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
 import { useTraceStore } from '@/store/traceStore';
@@ -13,26 +13,42 @@ export default function TracePage() {
   const store = useTraceStore();
   const [mode, setMode] = useState<'batch' | 'component'>('batch');
   const [query, setQuery] = useState('');
+  const [, setTick] = useState(0);
 
-  const projectArrivals = store.arrivals;
-  const allSamplings = store.samplings;
-  const allInspections = store.inspections;
-  const allInstalls = store.installRecords;
-  const allRects = store.rectifications;
+  // Tab切换或返回时强制刷新
+  useDidShow(() => {
+    setTick(t => t + 1);
+  });
+
+  const projectArrivals = store.arrivals || [];
+  const allSamplings = store.samplings || [];
+  const allInspections = store.inspections || [];
+  const allInstalls = store.installs || (store as any).installRecords || [];
+  const allRects = store.rectifications || [];
 
   const pendingRects = useMemo(() => allRects.filter(
     r => ['pending', 'processing', 'confirming'].includes(r.status)
   ), [allRects]);
 
   const matchResults = useMemo(() => {
-    if (!query) return [];
+    if (!query || projectArrivals.length === 0) return [];
     const kw = query.toLowerCase();
     const matched = projectArrivals.filter(a =>
-      a.batchNo.toLowerCase().includes(kw) ||
-      a.materialName.toLowerCase().includes(kw)
+      (a.batchNo || '').toLowerCase().includes(kw) ||
+      (a.materialName || '').toLowerCase().includes(kw)
     );
     return matched.slice(0, 5);
   }, [query, projectArrivals]);
+
+  // 6宫格描述文案
+  const entries = [
+    { icon: '🏗️', title: '按构件反查', desc: '从安装位置追溯材料批次来源', cls: styles.iconReverse, action: 'reverse' },
+    { icon: '📊', title: '按批次追溯', desc: '输入批号查看全生命周期', cls: styles.iconRange, action: 'batch' },
+    { icon: '📍', title: '安装位置', desc: `楼栋分配 · ${allInstalls.length}条记录`, cls: styles.iconInstall, action: 'install' },
+    { icon: '📁', title: '导出台账', desc: '验收记录、取样、检测数据导出', cls: styles.iconExport, action: 'export' },
+    { icon: '🧪', title: '检测管理', desc: `录入结论 · ${allInspections.length}份报告`, cls: styles.iconInspect, action: 'inspect' },
+    { icon: '🛠️', title: '整改跟踪', desc: `${pendingRects.length}项待处理整改`, cls: styles.iconRect, action: 'rect' }
+  ];
 
   const handleEntry = (action: string) => {
     switch (action) {
@@ -77,16 +93,7 @@ export default function TracePage() {
     allInspections.filter(i => i.arrivalId === arrivalId);
 
   const getInstallsOfBatch = (batchNo: string) =>
-    allInstalls.filter(rec => rec.materials.some(m => m.batchNo === batchNo));
-
-  const entries = [
-    { icon: '🏗️', title: '按构件反查', desc: '从安装位置追溯材料批次来源', cls: styles.iconReverse, action: 'reverse' },
-    { icon: '📊', title: '按批次追溯', desc: '输入批号查看全生命周期', cls: styles.iconRange, action: 'batch' },
-    { icon: '📍', title: '安装位置', desc: `楼栋分配 · ${allInstalls.length}条记录`, cls: styles.iconInstall, action: 'install' },
-    { icon: '📁', title: '导出台账', desc: '验收记录、取样、检测数据导出', cls: styles.iconExport, action: 'export' },
-    { icon: '🧪', title: '检测管理', desc: `录入结论 · ${allInspections.length}份报告`, cls: styles.iconInspect, action: 'inspect' },
-    { icon: '🛠️', title: '整改跟踪', desc: `${pendingRects.length}项待处理整改`, cls: styles.iconRect, action: 'rect' }
-  ];
+    allInstalls.filter(rec => (rec.materials || []).some(m => m.batchNo === batchNo));
 
   return (
     <View className='pageContainer'>
@@ -196,7 +203,7 @@ export default function TracePage() {
             <EmptyState title='未匹配到批次' description='请输入正确的批号或材料名' />
           ) : (
             matchResults.map(a => {
-              const asm = ARRIVAL_STATUS[a.status];
+              const asm = ARRIVAL_STATUS[a.status || 'pending'] || ARRIVAL_STATUS.pending;
               const traceSamplings = getSamplingsOfArrival(a.id);
               const traceInspections = getInspectionsOfArrival(a.id);
               const traceInstalls = getInstallsOfBatch(a.batchNo);
@@ -209,8 +216,8 @@ export default function TracePage() {
                 <View key={a.id} className={styles.resultCard}>
                   <View className={styles.resultHeader} onClick={() => handleGoArrival(a.id)}>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text className={styles.resultTitle}>{a.materialName} {a.spec}</Text>
-                      <Text className={styles.resultBatch}>批次：{a.batchNo}</Text>
+                      <Text className={styles.resultTitle}>{a.materialName || '材料'} {a.spec || ''}</Text>
+                      <Text className={styles.resultBatch}>批次：{a.batchNo || '无批号'}</Text>
                     </View>
                     <StatusTag text={asm.label} type={asm.type} size='sm' />
                   </View>
@@ -223,10 +230,10 @@ export default function TracePage() {
 
                   <View className={styles.pathBox}>
                     {[
-                      { step: '📦 到货验收', info: `${a.arrivalTime} · 验收：${a.receiver} · 监理：${a.witness || '待签字'}` },
+                      { step: '📦 到货验收', info: `${a.arrivalTime || '---'} · 验收：${a.receiver || '待验收'} · 监理：${a.witness || '待签字'}` },
                       { step: `🧪 取样送检（${traceSamplings.length}组）`,
                         info: traceSamplings.length > 0
-                          ? `${traceSamplings.map(s => stepLabel(s.currentStep)).join('、')}`
+                          ? `${traceSamplings.map(s => stepLabel(s.currentStep ?? 0)).join('、')}`
                           : '尚未取样' },
                       { step: `📊 检测报告（${traceInspections.length}份）`,
                         info: traceInspections.length > 0
@@ -234,7 +241,7 @@ export default function TracePage() {
                           : '等待检测' },
                       { step: `📍 安装记录（${traceInstalls.length}处）`,
                         info: traceInstalls.length > 0
-                          ? `涉及${[...new Set(traceInstalls.map(i => i.building))].length}栋 · ${traceInstalls.map(i => i.componentName).slice(0, 2).join('、')}${traceInstalls.length > 2 ? '…' : ''}`
+                          ? `涉及${[...new Set(traceInstalls.map(i => i.building || '未分配'))].length}栋 · ${traceInstalls.map(i => i.componentName || '未知构件').slice(0, 2).join('、')}${traceInstalls.length > 2 ? '…' : ''}`
                           : '尚未分配安装位置' }
                     ].map((p, i) => (
                       <View key={i} className={styles.pathNode}>
@@ -288,22 +295,25 @@ export default function TracePage() {
       {!query && (
         <View style={{ marginTop: 8 }}>
           <Text className='cardTitle' style={{ marginBottom: 16 }}>快速查询入口</Text>
-          {projectArrivals.slice(0, 4).map(a => (
-            <View key={a.id} className={styles.resultCard}>
-              <View className={styles.resultHeader}>
-                <View style={{ flex: 1 }} onClick={() => handleGoArrival(a.id)}>
-                  <Text className={styles.resultTitle}>{a.materialName} {a.spec}</Text>
-                  <Text className={styles.resultBatch}>批次：{a.batchNo} · {a.supplierName}</Text>
-                </View>
-                <View className={styles.quickTag} onClick={(e) => {
-                  e.stopPropagation();
-                  handleGoBatchDetail(a.batchNo);
-                }}>
-                  <Text style={{ color: '#1E6FFF' }}>追溯链路 →</Text>
+          {projectArrivals.slice(0, 4).map(a => {
+            const asm = ARRIVAL_STATUS[a.status || 'pending'] || ARRIVAL_STATUS.pending;
+            return (
+              <View key={a.id} className={styles.resultCard}>
+                <View className={styles.resultHeader}>
+                  <View style={{ flex: 1, minWidth: 0 }} onClick={() => handleGoArrival(a.id)}>
+                    <Text className={styles.resultTitle}>{a.materialName || '材料'} {a.spec || ''}</Text>
+                    <Text className={styles.resultBatch}>批次：{a.batchNo || '无批号'} · {a.supplier || a.supplierName || '供应商'}</Text>
+                  </View>
+                  <View className={styles.quickTag} onClick={(e) => {
+                    e.stopPropagation();
+                    handleGoBatchDetail(a.batchNo);
+                  }}>
+                    <Text style={{ color: '#1E6FFF' }}>追溯链路 →</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ))}
+            );
+          })}
         </View>
       )}
     </View>

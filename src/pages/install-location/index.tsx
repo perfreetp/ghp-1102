@@ -1,6 +1,6 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
 import { currentProjectId } from '@/data/projects';
@@ -10,22 +10,61 @@ import StatusTag from '@/components/StatusTag';
 import EmptyState from '@/components/EmptyState';
 import { BUILDINGS, FLOORS } from '@/data/constants';
 
+const STORAGE_KEY = 'install_filter_v1';
+
+interface FilterState {
+  search: string;
+  buildingFilter: string;
+  floorFilter: string;
+}
+
+const loadFilter = (): FilterState => {
+  try {
+    if (typeof localStorage === 'undefined') return { search: '', buildingFilter: '全部', floorFilter: '全部' };
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw) as FilterState;
+  } catch (e) { /* ignore */ }
+  return { search: '', buildingFilter: '全部', floorFilter: '全部' };
+};
+
+const saveFilter = (st: FilterState) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(STORAGE_KEY, JSON.stringify(st));
+  } catch (e) { /* ignore */ }
+};
+
 export default function InstallLocationPage() {
   const store = useTraceStore();
-  const [search, setSearch] = useState('');
-  const [buildingFilter, setBuildingFilter] = useState('全部');
-  const [floorFilter, setFloorFilter] = useState('全部');
+  const initial = loadFilter();
+  const [search, setSearch] = useState(initial.search);
+  const [buildingFilter, setBuildingFilter] = useState(initial.buildingFilter);
+  const [floorFilter, setFloorFilter] = useState(initial.floorFilter);
   const [selBuilding, setSelBuilding] = useState(BUILDINGS[0]);
   const [selFloor, setSelFloor] = useState(FLOORS[1]);
   const [traceDetail, setTraceDetail] = useState<any>(null);
 
-  const allRecords = useMemo(() => store.getInstallsByProject(currentProjectId) || store.installRecords, [store]);
+  // 持久化筛选条件
+  useEffect(() => {
+    saveFilter({ search, buildingFilter, floorFilter });
+  }, [search, buildingFilter, floorFilter]);
+
+  // Tab或返回进入时从localStorage恢复
+  useDidShow(() => {
+    const saved = loadFilter();
+    setSearch(saved.search);
+    setBuildingFilter(saved.buildingFilter);
+    setFloorFilter(saved.floorFilter);
+  });
+
+  const allRecords = useMemo(() =>
+    store.getInstallsByProject?.(currentProjectId) || store.installs || (store as any).installRecords || [],
+    [store]);
 
   const summary = useMemo(() => ({
     total: allRecords.length,
-    buildings: new Set(allRecords.map(r => r.building)).size,
-    installed: allRecords.reduce((s, r) => s + r.materials.length, 0),
-    teams: new Set(allRecords.map(r => r.teamName)).size
+    buildings: new Set(allRecords.map(r => r.building || '未分配')).size,
+    installed: allRecords.reduce((s, r) => s + ((r.materials || []).length || 0), 0),
+    teams: new Set(allRecords.map(r => r.teamName || '施工班组')).size
   }), [allRecords]);
 
   const list = useMemo(() => {
@@ -33,18 +72,21 @@ export default function InstallLocationPage() {
       if (buildingFilter !== '全部' && r.building !== buildingFilter) return false;
       if (floorFilter !== '全部') {
         // 支持包含匹配，比如选3层，匹配3-5层
-        if (r.floor !== floorFilter && !r.floor.includes(floorFilter.replace('层', '')) && !floorFilter.includes(r.floor.replace('层', ''))) {
+        const floorVal = r.floor || '';
+        if (floorVal !== floorFilter &&
+            !floorVal.includes(floorFilter.replace('层', '')) &&
+            !floorFilter.includes(floorVal.replace('层', ''))) {
           return false;
         }
       }
       if (search) {
         const kw = search.toLowerCase();
         return (
-          r.building.toLowerCase().includes(kw) ||
-          r.componentName.toLowerCase().includes(kw) ||
-          r.teamName.toLowerCase().includes(kw) ||
+          (r.building || '').toLowerCase().includes(kw) ||
+          (r.componentName || '').toLowerCase().includes(kw) ||
+          (r.teamName || '').toLowerCase().includes(kw) ||
           (r.buildingUnit || '').toLowerCase().includes(kw) ||
-          r.materials.some(m => m.batchNo.toLowerCase().includes(kw))
+          (r.materials || []).some(m => (m.batchNo || '').toLowerCase().includes(kw))
         );
       }
       return true;
@@ -156,23 +198,23 @@ export default function InstallLocationPage() {
           list.map(r => (
             <View key={r.id} className={styles.installCard}>
               <View className={styles.cardHeader}>
-                <View style={{ flex: 1 }}>
-                  <Text className={styles.cardTitle}>{r.componentName}</Text>
-                  <Text style={{ fontSize: 20, color: '#86909C' }}>{r.componentCode}</Text>
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text className={styles.cardTitle}>{r.componentName || '构件'}</Text>
+                  <Text style={{ fontSize: 20, color: '#86909C' }}>{r.componentCode || '未编号'}</Text>
                 </View>
                 <View className={styles.locationBadge}>
-                  <Text>{r.building} {r.floor}{r.buildingUnit ? ` · ${r.buildingUnit}` : ''}</Text>
+                  <Text>{r.building || '未分配'} {r.floor || ''}{r.buildingUnit ? ` · ${r.buildingUnit}` : ''}</Text>
                 </View>
               </View>
 
               <View className={styles.infoGrid}>
                 <View className={styles.infoItem}>
                   <Text className={styles.infoLabel}>安装区域：</Text>
-                  <Text className={styles.infoValue}>{r.area}</Text>
+                  <Text className={styles.infoValue}>{r.area || '主体结构'}</Text>
                 </View>
                 <View className={styles.infoItem}>
                   <Text className={styles.infoLabel}>安装时间：</Text>
-                  <Text className={styles.infoValue}>{r.installDate}</Text>
+                  <Text className={styles.infoValue}>{r.installDate || '已登记'}</Text>
                 </View>
                 <View className={styles.infoItem}>
                   <Text className={styles.infoLabel}>楼栋单元：</Text>
@@ -180,7 +222,7 @@ export default function InstallLocationPage() {
                 </View>
                 <View className={styles.infoItem}>
                   <Text className={styles.infoLabel}>构件数量：</Text>
-                  <Text className={styles.infoValue} style={{ color: '#FF7D00', fontWeight: 600 }}>{r.quantity} {r.qtyUnit}</Text>
+                  <Text className={styles.infoValue} style={{ color: '#FF7D00', fontWeight: 600 }}>{r.quantity || 0} {r.qtyUnit || '件'}</Text>
                 </View>
               </View>
 
@@ -191,32 +233,32 @@ export default function InstallLocationPage() {
                 </View>
                 <View className={styles.teamInfo}>
                   <View className={styles.teamAvatar}>
-                    <Text>{r.teamName.slice(0, 1)}</Text>
+                    <Text>{(r.teamName || '施').slice(0, 1)}</Text>
                   </View>
                   <View className={styles.teamDetails}>
-                    <Text className={styles.teamName}>{r.teamName}</Text>
-                    <Text className={styles.teamLeader}>班组长：{r.teamLeader} · 📞 {r.teamPhone}</Text>
+                    <Text className={styles.teamName}>{r.teamName || '施工班组'}</Text>
+                    <Text className={styles.teamLeader}>班组长：{r.teamLeader || '未指定'} · 📞 {r.teamPhone || '无联系'}</Text>
                   </View>
                 </View>
               </View>
 
               <View className={styles.materialList}>
-                <Text className={styles.matSectionTitle}>📦 使用材料批次（{r.materials.length}项）</Text>
-                {r.materials.slice(0, 3).map(m => (
+                <Text className={styles.matSectionTitle}>📦 使用材料批次（{(r.materials || []).length}项）</Text>
+                {(r.materials || []).slice(0, 3).map(m => (
                   <View key={m.batchNo} className={styles.matItem}>
                     <View className={styles.matLeft}>
-                      <Text className={styles.matName}>{m.materialName}</Text>
-                      <Text className={styles.matBatch}>批号：{m.batchNo}</Text>
+                      <Text className={styles.matName}>{m.materialName || '材料'}</Text>
+                      <Text className={styles.matBatch}>批号：{m.batchNo || '无批号'}</Text>
                     </View>
                     <View style={{ textAlign: 'right' }}>
-                      <Text className={styles.matQty}>{m.quantity}</Text>
-                      <Text style={{ fontSize: 18, color: '#86909C' }}>{m.unit}</Text>
+                      <Text className={styles.matQty}>{m.quantity || 0}</Text>
+                      <Text style={{ fontSize: 18, color: '#86909C' }}>{m.unit || '批'}</Text>
                     </View>
                   </View>
                 ))}
-                {r.materials.length > 3 && (
+                {(r.materials || []).length > 3 && (
                   <View style={{ padding: '12px 0', fontSize: 22, color: '#1E6FFF', textAlign: 'center' }}>
-                    + 查看全部 {r.materials.length} 项材料 →
+                    + 查看全部 {(r.materials || []).length} 项材料 →
                   </View>
                 )}
               </View>
@@ -225,19 +267,23 @@ export default function InstallLocationPage() {
                 <View
                   className={classnames(styles.actionBtn, styles.btnSecondary)}
                   onClick={() => setTraceDetail({
-                    component: r.componentName,
-                    building: r.building,
-                    floor: r.floor,
-                    buildingUnit: r.buildingUnit,
-                    area: r.area,
-                    materials: r.materials
+                    component: r.componentName || '构件',
+                    building: r.building || '未分配',
+                    floor: r.floor || '',
+                    buildingUnit: r.buildingUnit || '',
+                    area: r.area || '主体结构',
+                    materials: r.materials || []
                   })}
                 >
                   <Text>🔍 反查来源</Text>
                 </View>
                 <View
                   className={classnames(styles.actionBtn, styles.btnTrace)}
-                  onClick={() => r.materials[0]?.batchNo && Taro.navigateTo({ url: `/pages/batch-detail/index?batchNo=${r.materials[0].batchNo}` })}
+                  onClick={() => {
+                    const bn = (r.materials || [])[0]?.batchNo;
+                    if (bn) Taro.navigateTo({ url: `/pages/batch-detail/index?batchNo=${bn}` });
+                    else Taro.showToast({ title: '无关联批次', icon: 'none' });
+                  }}
                 >
                   <Text>🔗 追溯批次</Text>
                 </View>
@@ -281,10 +327,10 @@ export default function InstallLocationPage() {
             </View>
             <View style={{ padding: 20, maxHeight: '50vh', overflow: 'auto' }}>
               <Text style={{ fontSize: 22, color: '#86909C', display: 'block', marginBottom: 16 }}>
-                共使用 {traceDetail.materials.length} 项材料批次，点击查看完整追溯链路：
+                共使用 {(traceDetail.materials || []).length} 项材料批次，点击查看完整追溯链路：
               </Text>
-              {traceDetail.materials.map(m => {
-                const arr = store.arrivals.find(a => a.batchNo === m.batchNo);
+              {(traceDetail.materials || []).map(m => {
+                const arr = (store.arrivals || []).find(a => a.batchNo === m.batchNo);
                 return (
                   <View
                     key={m.batchNo}
@@ -303,18 +349,18 @@ export default function InstallLocationPage() {
                     <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
                       <View style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
                         <Text style={{ fontSize: 26, fontWeight: 600, color: '#1D2129', display: 'block', marginBottom: 4 }}>
-                          {m.materialName}
+                          {m.materialName || '材料'}
                         </Text>
                         <Text style={{ fontSize: 20, color: '#4E5969', display: 'block', marginBottom: 4 }}>
                           {m.spec || ''}
                         </Text>
                         <Text style={{ fontSize: 22, color: '#1E6FFF', fontFamily: 'monospace' }}>
-                          #{m.batchNo}
+                          #{m.batchNo || '无批号'}
                         </Text>
                       </View>
                       <View style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <Text style={{ fontSize: 30, fontWeight: 700, color: '#FF7D00', display: 'block' }}>{m.quantity}</Text>
-                        <Text style={{ fontSize: 20, color: '#86909C', display: 'block' }}>{m.unit}</Text>
+                        <Text style={{ fontSize: 30, fontWeight: 700, color: '#FF7D00', display: 'block' }}>{m.quantity || 0}</Text>
+                        <Text style={{ fontSize: 20, color: '#86909C', display: 'block' }}>{m.unit || '批'}</Text>
                       </View>
                     </View>
                     {arr && (
@@ -325,7 +371,7 @@ export default function InstallLocationPage() {
                         borderRadius: 8
                       }}>
                         <Text style={{ fontSize: 20, color: '#4E5969' }}>
-                          🚚 {arr.supplier} · {arr.arrivalTime.slice(0, 10)}到货
+                          🚚 {arr.supplier || arr.supplierName || '供应商'} · {(arr.arrivalTime || '----').slice(0, 10)}到货
                         </Text>
                       </View>
                     )}
