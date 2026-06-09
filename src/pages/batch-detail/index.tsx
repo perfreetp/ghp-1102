@@ -1,32 +1,44 @@
 import React, { useMemo, useState } from 'react';
-import { View, Text, ScrollView } from '@tarojs/components';
+import { View, Text, ScrollView, Input } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
 import { useTraceStore } from '@/store/traceStore';
 import StatusTag from '@/components/StatusTag';
+import EmptyState from '@/components/EmptyState';
+import { ARRIVAL_STATUS, SAMPLING_STEP_LABELS, INSPECTION_CONCLUSION_MAP, RECTIFICATION_STATUS_MAP, RECTIFICATION_PRIORITY_MAP } from '@/data/constants';
 
 export default function BatchDetailPage() {
   const router = useRouter();
-  const paramBatch = (router.params.batchNo as string) || '';
+  const paramBatch = ((router.params.batchNo as string) || '').trim();
 
   const store = useTraceStore();
   const arrivals = store.arrivals;
+  const allSamplings = store.samplings;
+  const allInspections = store.inspections;
+  const allInstalls = store.installRecords;
+  const allRects = store.rectifications;
 
-  const allBatchNos = useMemo(() => {
-    return [...new Set(arrivals.map(a => a.batchNo))];
-  }, [arrivals]);
+  const allBatchNos = useMemo(() => [...new Set(arrivals.map(a => a.batchNo))], [arrivals]);
 
-  const [searchInput, setSearchInput] = useState(paramBatch || arrivals[0]?.batchNo || '');
-  const [batchNo, setBatchNo] = useState(paramBatch || arrivals[0]?.batchNo || '');
+  const [searchInput, setSearchInput] = useState(paramBatch || (allBatchNos[0] || ''));
+  const [batchNo, setBatchNo] = useState<string>(paramBatch || (allBatchNos[0] || ''));
   const [showExport, setShowExport] = useState(false);
   const [exportText, setExportText] = useState('');
 
   const arrival = useMemo(() => arrivals.find(a => a.batchNo === batchNo), [arrivals, batchNo]);
-  const relatedSamplings = useMemo(() => store.getSamplingsByBatch(batchNo), [store, batchNo]);
-  const relatedInspections = useMemo(() => store.getInspectionsByBatch(batchNo), [store, batchNo]);
-  const relatedInstalls = useMemo(() => store.getInstallsByBatch(batchNo), [store, batchNo]);
-  const relatedRects = useMemo(() => store.getRectificationsByBatch(batchNo), [store, batchNo]);
+  const relatedSamplings = useMemo(() =>
+    arrival ? allSamplings.filter(s => s.arrivalId === arrival.id) : []
+  , [allSamplings, arrival]);
+  const relatedInspections = useMemo(() =>
+    arrival ? allInspections.filter(i => i.arrivalId === arrival.id) : []
+  , [allInspections, arrival]);
+  const relatedInstalls = useMemo(() =>
+    allInstalls.filter(rec => rec.materials.some(m => m.batchNo === batchNo))
+  , [allInstalls, batchNo]);
+  const relatedRects = useMemo(() =>
+    allRects.filter(r => r.sourceBatchNo === batchNo)
+  , [allRects, batchNo]);
 
   const hasUnqualified = relatedInspections.some(i => i.conclusion === 'unqualified');
   const hasInstall = relatedInstalls.length > 0;
@@ -36,23 +48,70 @@ export default function BatchDetailPage() {
     const found = r.materials.find(m => m.batchNo === batchNo);
     return s + (found ? found.quantity : 0);
   }, 0);
+  const totalUnit = arrival?.unit || '';
+
+  const findBatchByKeyword = (kw: string): string | null => {
+    if (!kw) return null;
+    const low = kw.toLowerCase().trim();
+    // 精确匹配
+    const exact = allBatchNos.find(b => b.toLowerCase() === low);
+    if (exact) return exact;
+    // 包含匹配
+    const inc = allBatchNos.find(b => b.toLowerCase().includes(low));
+    if (inc) return inc;
+    // 反向包含
+    const rinc = allBatchNos.find(b => low.includes(b.toLowerCase()));
+    if (rinc) return rinc;
+    return null;
+  };
 
   const handleSearch = () => {
-    const match = allBatchNos.find(b =>
-      b.toLowerCase().includes(searchInput.toLowerCase()) ||
-      searchInput.toLowerCase().includes(b.toLowerCase())
-    );
-    if (match) {
-      setBatchNo(match);
-      Taro.showToast({ title: '已找到批次', icon: 'success' });
-    } else {
-      Taro.showModal({
-        title: '未找到批次',
-        content: `批号「${searchInput}」暂无追溯记录，下方为示例数据`,
-        showCancel: false,
-        success: () => setBatchNo(allBatchNos[0] || '')
-      });
+    const kw = searchInput.trim();
+    if (!kw) {
+      Taro.showToast({ title: '请输入批号', icon: 'none' });
+      return;
     }
+    const found = findBatchByKeyword(kw);
+    if (found) {
+      setBatchNo(found);
+      Taro.showToast({ title: '已定位到批次', icon: 'success' });
+    } else {
+      Taro.showToast({ title: `未找到「${kw}」，请检查批号`, icon: 'none' });
+    }
+  };
+
+  const handleScan = () => {
+    Taro.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success: (res) => {
+        const code = (res.result || '').trim();
+        setSearchInput(code);
+        const found = findBatchByKeyword(code);
+        if (found) {
+          setBatchNo(found);
+          Taro.showToast({ title: '扫码匹配到批次', icon: 'success' });
+        } else {
+          Taro.showModal({
+            title: '扫码结果',
+            content: `扫码获得「${code}」，系统暂未收录该批号。可手动输入或返回列表查看。`,
+            showCancel: false,
+            confirmText: '好的'
+          });
+        }
+      },
+      fail: () => {
+        Taro.showActionSheet({
+          itemList: ['HC20260610-001（钢筋）', 'SN20260610-008（水泥）', 'HT20260609-015（砌体）', 'DT20260606-017（电缆）'],
+          success: (r) => {
+            const map = ['HC20260610-001', 'SN20260610-008', 'HT20260609-015', 'DT20260606-017'];
+            const code = map[r.tapIndex];
+            setSearchInput(code);
+            setBatchNo(code);
+          }
+        });
+      }
+    });
   };
 
   const handleSelectHistory = (b: string) => {
@@ -69,58 +128,80 @@ export default function BatchDetailPage() {
   const handleCopy = () => {
     Taro.setClipboardData({
       data: exportText,
-      success: () => Taro.showToast({ title: '台账已复制', icon: 'success' })
+      success: () => Taro.showToast({ title: '台账已复制到剪贴板', icon: 'success' })
     });
   };
 
+  const stepLabel = (step: number) =>
+    SAMPLING_STEP_LABELS[Math.min(Math.max(step, 0), SAMPLING_STEP_LABELS.length - 1)] || '待开始';
+
+  // 渲染空态（未找到批次时）
   if (!arrival) {
     return (
       <View className='pageContainer'>
-        <View className={styles.formCard} style={{ padding: 24 }}>
+        <View className={styles.formCard} style={{ padding: 24, borderRadius: 16 }}>
           <View style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-            <View className={styles.formInput} style={{ flex: 1 }}>
-              <input
+            <View className={styles.formInput} style={{ flex: 1, height: 72 }}>
+              <Input
                 value={searchInput}
                 onInput={e => setSearchInput(e.detail.value)}
+                onConfirm={handleSearch}
                 placeholder='输入批号查询，如 HC20260610-001'
                 style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 26 }}
               />
             </View>
             <View
+              onClick={handleScan}
+              style={{
+                background: '#F2F3F5', color: '#4E5969', padding: '0 20rpx',
+                height: 72, borderRadius: 12, display: 'flex', alignItems: 'center',
+                fontWeight: 600, fontSize: 26, flexShrink: 0
+              }}
+            >
+              <Text>📷</Text>
+            </View>
+            <View
               style={{
                 background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)',
-                color: '#fff',
-                padding: '0 24px',
-                height: 80,
-                borderRadius: 12,
-                display: 'flex',
-                alignItems: 'center',
-                fontWeight: 600,
-                fontSize: 26
+                color: '#fff', padding: '0 28rpx',
+                height: 72, borderRadius: 12, display: 'flex', alignItems: 'center',
+                fontWeight: 600, fontSize: 26, flexShrink: 0
               }}
               onClick={handleSearch}
             >
               <Text>🔍 查询</Text>
             </View>
           </View>
-          <Text style={{ fontSize: 24, color: '#86909C', textAlign: 'center', display: 'block', padding: '64rpx 0' }}>
-            暂无该批次追溯记录
-          </Text>
+          <View style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+            <Text style={{ fontSize: 22, color: '#86909C', paddingTop: 4 }}>示例批号：</Text>
+            {['HC20260610-001', 'SN20260610-008', 'HT20260609-015'].map(b => (
+              <Text
+                key={b}
+                onClick={() => handleSelectHistory(b)}
+                style={{
+                  fontSize: 20, padding: '6rpx 16rpx', borderRadius: 20,
+                  background: '#F2F3F5', color: '#4E5969',
+                }}
+              >{b}</Text>
+            ))}
+          </View>
+          <EmptyState
+            title={searchInput ? `批号「${searchInput}」暂未收录` : '请输入要查询的批号'}
+            description='可手动输入或点击上方📷扫码模拟'
+          />
         </View>
       </View>
     );
   }
 
+  const asm = ARRIVAL_STATUS[arrival.status] || { label: '未知', type: 'info' as const };
+
   return (
     <View className='pageContainer' style={{ paddingBottom: 180 }}>
-      <View className={styles.formCard} style={{
-        padding: 20,
-        marginBottom: 16,
-        borderRadius: 16
-      }}>
+      <View className={styles.formCard} style={{ padding: 20, marginBottom: 16, borderRadius: 16 }}>
         <View style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
           <View className={styles.formInput} style={{ flex: 1, height: 72 }}>
-            <input
+            <Input
               value={searchInput}
               onInput={e => setSearchInput(e.detail.value)}
               onConfirm={handleSearch}
@@ -129,18 +210,22 @@ export default function BatchDetailPage() {
             />
           </View>
           <View
+            onClick={handleScan}
+            style={{
+              background: '#F2F3F5', color: '#4E5969', padding: '0 20rpx',
+              height: 72, borderRadius: 12, display: 'flex', alignItems: 'center',
+              fontWeight: 600, fontSize: 26, flexShrink: 0
+            }}
+          >
+            <Text>📷</Text>
+          </View>
+          <View
             onClick={handleSearch}
             style={{
               background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)',
-              color: '#fff',
-              padding: '0 28rpx',
-              height: 72,
-              borderRadius: 12,
-              display: 'flex',
-              alignItems: 'center',
-              fontWeight: 600,
-              fontSize: 26,
-              flexShrink: 0
+              color: '#fff', padding: '0 28rpx',
+              height: 72, borderRadius: 12, display: 'flex', alignItems: 'center',
+              fontWeight: 600, fontSize: 26, flexShrink: 0
             }}
           >
             <Text>🔍 查询</Text>
@@ -148,40 +233,41 @@ export default function BatchDetailPage() {
         </View>
         <View style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Text style={{ fontSize: 22, color: '#86909C', paddingTop: 4 }}>快速切换：</Text>
-          {allBatchNos.slice(0, 6).map(b => (
+          {allBatchNos.slice(0, 8).map(b => (
             <Text
               key={b}
               onClick={() => handleSelectHistory(b)}
               style={{
-                fontSize: 20,
-                padding: '6rpx 16rpx',
-                borderRadius: 20,
+                fontSize: 20, padding: '6rpx 16rpx', borderRadius: 20,
                 background: b === batchNo ? 'linear-gradient(135deg,#1E6FFF,#4D92FF)' : '#F2F3F5',
                 color: b === batchNo ? '#fff' : '#4E5969',
                 fontWeight: b === batchNo ? 500 : 400
               }}
-            >
-              {b.slice(-8)}
-            </Text>
+            >{b.length > 10 ? b.slice(-10) : b}</Text>
           ))}
         </View>
       </View>
 
       <View className={styles.batchCard}>
-        <Text className={styles.batchTag}>🔍 材料批次追溯</Text>
+        <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text className={styles.batchTag}>🔍 材料批次追溯</Text>
+          <StatusTag text={asm.label} type={asm.type as any} size='sm' />
+        </View>
         <Text className={styles.batchNo}>{arrival.batchNo}</Text>
         <Text className={styles.batchMatName}>{arrival.materialName} · {arrival.spec}</Text>
         <View className={styles.batchStats}>
           <View className={styles.statCol}>
             <Text className={styles.statVal}>{arrival.quantity}</Text>
-            <Text className={styles.statLbl}>到货总量({arrival.unit})</Text>
+            <Text className={styles.statLbl}>到货总量 {arrival.unit}</Text>
           </View>
           <View className={styles.statCol}>
-            <Text className={styles.statVal}>{relatedInspections.filter(i => i.conclusion === 'qualified').length}/{relatedInspections.length}</Text>
+            <Text className={styles.statVal} style={{
+              color: relatedInspections.length === 0 ? '#86909C' : (relatedInspections.every(i => i.conclusion === 'qualified') ? '#00B42A' : '#F53F3F')
+            }}>{relatedInspections.filter(i => i.conclusion === 'qualified').length}/{relatedInspections.length}</Text>
             <Text className={styles.statLbl}>检测合格</Text>
           </View>
           <View className={styles.statCol}>
-            <Text className={styles.statVal}>{relatedInstalls.length}</Text>
+            <Text className={styles.statVal} style={{ color: '#722ED1' }}>{relatedInstalls.length}</Text>
             <Text className={styles.statLbl}>使用位置</Text>
           </View>
         </View>
@@ -189,9 +275,7 @@ export default function BatchDetailPage() {
 
       {hasUnqualified ? (
         <View className={classnames(styles.statusBanner, styles.bannerErr)}>
-          <View className={classnames(styles.bannerIcon, styles.iconErr)}>
-            <Text>✕</Text>
-          </View>
+          <View className={classnames(styles.bannerIcon, styles.iconErr)}><Text>✕</Text></View>
           <View className={styles.bannerText}>
             <Text className={styles.bannerTitle}>⚠️ 该批次含不合格检测</Text>
             <Text className={styles.bannerDesc}>已拦截使用，{relatedRects.length}项整改进行中</Text>
@@ -200,9 +284,7 @@ export default function BatchDetailPage() {
         </View>
       ) : hasInstall ? (
         <View className={classnames(styles.statusBanner, styles.bannerOk)}>
-          <View className={classnames(styles.bannerIcon, styles.iconOk)}>
-            <Text>✓</Text>
-          </View>
+          <View className={classnames(styles.bannerIcon, styles.iconOk)}><Text>✓</Text></View>
           <View className={styles.bannerText}>
             <Text className={styles.bannerTitle}>✅ 批次流转正常</Text>
             <Text className={styles.bannerDesc}>已通过检测并完成安装使用</Text>
@@ -211,20 +293,21 @@ export default function BatchDetailPage() {
         </View>
       ) : (
         <View className={classnames(styles.statusBanner, styles.bannerWarn)}>
-          <View className={classnames(styles.bannerIcon, styles.iconWarn)}>
-            <Text>!</Text>
-          </View>
+          <View className={classnames(styles.bannerIcon, styles.iconWarn)}><Text>!</Text></View>
           <View className={styles.bannerText}>
             <Text className={styles.bannerTitle}>⏳ 流转中</Text>
-            <Text className={styles.bannerDesc}>正在检测中，请等待检测结果</Text>
+            <Text className={styles.bannerDesc}>
+              {relatedInspections.length === 0 ? '正在检测中，请等待检测结果' : '检测完成，等待安装使用'}
+            </Text>
           </View>
           <StatusTag text='流转中' type='warning' size='sm' />
         </View>
       )}
 
-      <View className={styles.timelineWrap}>
+      <ScrollView scrollY className={styles.timelineWrap}>
         <Text className={styles.timelineTitle}>🔄 全生命周期追溯</Text>
 
+        {/* Step1 到货验收 */}
         <View className={styles.tlItem}>
           <View className={styles.tlLine} />
           <View className={classnames(styles.tlDot, styles.dotDone)}><Text>1</Text></View>
@@ -234,33 +317,29 @@ export default function BatchDetailPage() {
               <Text className={styles.tlTime}>{arrival.arrivalTime}</Text>
             </View>
             <View className={styles.tlBody}>
-              <View className={styles.tlRow}>
-                <Text className={styles.tlKey}>到货单号</Text>
-                <Text className={styles.tlVal}>{arrival.id}</Text>
-              </View>
-              <View className={styles.tlRow}>
-                <Text className={styles.tlKey}>供应商</Text>
-                <Text className={styles.tlVal}>{arrival.supplier}</Text>
-              </View>
-              <View className={styles.tlRow}>
-                <Text className={styles.tlKey}>数量/规格</Text>
-                <Text className={styles.tlVal}>{arrival.quantity}{arrival.unit} · {arrival.spec}</Text>
-              </View>
-              <View className={styles.tlRow}>
-                <Text className={styles.tlKey}>验收人</Text>
-                <Text className={styles.tlVal}>{arrival.receiver} / 监理 {arrival.witness}</Text>
-              </View>
-              <View className={styles.tlRow}>
-                <Text className={styles.tlKey}>规格核对</Text>
-                <Text className={styles.tlVal} style={{ color: arrival.specMatched ? '#00B42A' : '#F53F3F' }}>
-                  {arrival.specMatched ? '✅ 与合同一致' : '❌ 不一致'}
-                </Text>
-              </View>
+              {[
+                ['到货单号', arrival.id],
+                ['供应商', arrival.supplier],
+                ['规格', arrival.spec],
+                ['数量', `${arrival.quantity}${arrival.unit}`],
+                ['验收人 / 监理', `${arrival.receiver} / ${arrival.witness || '待签字'}`],
+                ['运输车辆', arrival.vehicleNo || '—'],
+                ['规格核对', arrival.specMatched ? '✅ 与合同一致' : '❌ 不一致'],
+              ].map(([k, v]) => (
+                <View key={k} className={styles.tlRow}>
+                  <Text className={styles.tlKey}>{k}</Text>
+                  <Text className={styles.tlVal}>{v}</Text>
+                </View>
+              ))}
+              {arrival.remarks && (
+                <View className={styles.tlRow}>
+                  <Text className={styles.tlKey}>备注</Text>
+                  <Text className={styles.tlVal}>{arrival.remarks}</Text>
+                </View>
+              )}
               <View className={styles.tlActions}>
-                <View
-                  className={classnames(styles.tlBtn, styles.tlBtnGhost)}
-                  onClick={() => Taro.navigateTo({ url: `/pages/arrival-detail/index?id=${arrival.id}` })}
-                >
+                <View className={classnames(styles.tlBtn, styles.tlBtnGhost)}
+                  onClick={() => Taro.navigateTo({ url: `/pages/arrival-detail/index?id=${arrival.id}` })}>
                   <Text>查看详情</Text>
                 </View>
               </View>
@@ -268,338 +347,209 @@ export default function BatchDetailPage() {
           </View>
         </View>
 
+        {/* Step2 取样送检 */}
         <View className={styles.tlItem}>
           <View className={styles.tlLine} />
-          <View className={classnames(styles.tlDot, relatedSamplings.length > 0 ? styles.dotDone : styles.dotPending)}>
-            <Text>2</Text>
-          </View>
+          <View className={classnames(styles.tlDot, relatedSamplings.length > 0 ? styles.dotDone : styles.dotPending)}><Text>2</Text></View>
           <View className={styles.tlContent}>
             <View className={styles.tlHeader}>
-              <Text className={styles.tlName}>📌 见证取样</Text>
+              <Text className={styles.tlName}>📌 见证取样（{relatedSamplings.length}组）</Text>
               <Text className={styles.tlTime}>{relatedSamplings[0]?.samplingDate || '待取样'}</Text>
             </View>
             <View className={styles.tlBody}>
-              {relatedSamplings.length > 0 ? (
-                relatedSamplings.slice(0, 1).map(s => (
-                  <View key={s.id}>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>取样编号</Text>
-                      <Text className={styles.tlVal}>{s.samplingNo}</Text>
-                    </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>取样规格</Text>
-                      <Text className={styles.tlVal}>{s.spec}</Text>
-                    </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>见证人</Text>
-                      <Text className={styles.tlVal}>{s.witnessName}({s.witnessUnit})</Text>
-                    </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>送检状态</Text>
-                      <Text className={styles.tlVal}>{s.currentStep >= 5 ? '✓ 已完成' : `第${s.currentStep}/5步 · 进行中`}</Text>
-                    </View>
-                  </View>
-                ))
+              {relatedSamplings.length === 0 ? (
+                <Text style={{ fontSize: 24, color: '#86909C', padding: '12rpx 0' }}>⏳ 暂无取样记录，点击到货详情→生成取样任务</Text>
               ) : (
-                <View className={styles.tlRow}>
-                  <Text className={styles.tlVal} style={{ color: '#86909C' }}>尚未生成取样任务</Text>
-                </View>
-              )}
-              {relatedSamplings.length > 0 && (
-                <View className={styles.tlActions}>
-                  <View
-                    className={classnames(styles.tlBtn, styles.tlBtnGhost)}
-                    onClick={() => Taro.switchTab({ url: '/pages/sampling/index' })}
-                  >
-                    <Text>查看取样详情</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        <View className={styles.tlItem}>
-          <View className={styles.tlLine} />
-          <View className={classnames(styles.tlDot, relatedInspections.length > 0 ? styles.dotDone : styles.dotPending)}>
-            <Text>3</Text>
-          </View>
-          <View className={styles.tlContent}>
-            <View className={styles.tlHeader}>
-              <Text className={styles.tlName}>🔬 检测报告</Text>
-              <Text className={styles.tlTime}>{relatedInspections[0]?.inspectDate || '待检测'}</Text>
-            </View>
-            <View className={styles.tlBody}>
-              {relatedInspections.length > 0 ? (
-                relatedInspections.map(i => (
-                  <View key={i.id}>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>报告编号</Text>
-                      <Text className={styles.tlVal}>{i.reportNo}</Text>
-                    </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>检测机构</Text>
-                      <Text className={styles.tlVal}>{i.labName}</Text>
-                    </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>检测结论</Text>
-                      <Text className={styles.tlVal} style={{ color: i.conclusion === 'qualified' ? '#00B42A' : '#F53F3F' }}>
-                        {i.conclusion === 'qualified' ? '✅ 合格' : '❌ 不合格'}
-                      </Text>
-                    </View>
-                    {i.conclusion === 'unqualified' && (
-                      <View className={styles.tlRow}>
-                        <Text className={styles.tlKey}>使用拦截</Text>
-                        <Text className={styles.tlVal} style={{ color: '#F53F3F' }}>
-                          {i.blockUsage ? '🔴 已拦截禁止使用' : '未拦截'}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                ))
-              ) : (
-                <View className={styles.tlRow}>
-                  <Text className={styles.tlVal} style={{ color: '#86909C' }}>暂无检测报告</Text>
-                </View>
-              )}
-              {relatedInspections.length > 0 && (
-                <View className={styles.tlActions}>
-                  <View
-                    className={classnames(styles.tlBtn, styles.tlBtnGhost)}
-                    onClick={() => Taro.navigateTo({ url: '/pages/inspection/index' })}
-                  >
-                    <Text>查看检测报告</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        <View className={styles.tlItem}>
-          <View className={styles.tlLine} />
-          <View className={classnames(styles.tlDot, hasInstall ? styles.dotDone : styles.dotPending)}>
-            <Text>4</Text>
-          </View>
-          <View className={styles.tlContent}>
-            <View className={styles.tlHeader}>
-              <Text className={styles.tlName}>🏗️ 安装使用</Text>
-              <Text className={styles.tlTime}>{relatedInstalls[0]?.installDate || '待分配'}</Text>
-            </View>
-            <View className={styles.tlBody}>
-              {hasInstall ? (
-                <View>
-                  <View className={styles.tlRow}>
-                    <Text className={styles.tlKey}>使用位置</Text>
-                    <Text className={styles.tlVal}>
-                      {relatedInstalls.map(r => `${r.building}${r.floor}`).join('、')}
-                    </Text>
-                  </View>
-                  <View className={styles.tlRow}>
-                    <Text className={styles.tlKey}>使用部位</Text>
-                    <Text className={styles.tlVal}>
-                      {relatedInstalls.map(r => r.componentName).join('、')}
-                    </Text>
-                  </View>
-                  <View className={styles.tlRow}>
-                    <Text className={styles.tlKey}>已用数量</Text>
-                    <Text className={styles.tlVal} style={{ color: '#1E6FFF', fontWeight: 700 }}>
-                      {totalQty}{arrival.unit} / 共{arrival.quantity}{arrival.unit}
-                    </Text>
-                  </View>
-                  <View className={styles.tlRow}>
-                    <Text className={styles.tlKey}>施工班组</Text>
-                    <Text className={styles.tlVal}>
-                      {[...new Set(relatedInstalls.map(r => r.teamName))].join('、')}
-                    </Text>
-                  </View>
-                </View>
-              ) : (
-                <View className={styles.tlRow}>
-                  <Text className={styles.tlVal} style={{ color: '#86909C' }}>
-                    {hasUnqualified ? '❌ 不合格，禁止分配安装' : '尚未分配安装位置'}
-                  </Text>
-                </View>
-              )}
-              {hasInstall && (
-                <View className={styles.tlActions}>
-                  <View
-                    className={classnames(styles.tlBtn, styles.tlBtnGhost)}
-                    onClick={() => Taro.navigateTo({ url: '/pages/install-location/index' })}
-                  >
-                    <Text>查看安装位置</Text>
-                  </View>
-                </View>
-              )}
-            </View>
-          </View>
-        </View>
-
-        {hasRect && (
-          <View className={styles.tlItem}>
-            <View className={styles.tlDot} style={{ background: '#F53F3F', color: '#fff' }}>
-              <Text>!</Text>
-            </View>
-            <View className={styles.tlContent}>
-              <View className={styles.tlHeader}>
-                <Text className={styles.tlName}>⚠️ 整改记录</Text>
-                <Text className={styles.tlTime}>{relatedRects[0]?.createDate}</Text>
-              </View>
-              <View className={styles.tlBody}>
-                {relatedRects.map(r => {
-                  const map: Record<string, string> = {
-                    pending: '待处理', processing: '整改中', confirming: '待确认',
-                    approved: '已通过', rejected: '已驳回'
-                  };
+                relatedSamplings.map((s, idx) => {
+                  const stepColors = ['#86909C', '#1E6FFF', '#1E6FFF', '#722ED1', '#722ED1', '#00B42A'];
+                  const step = Math.min(Math.max(s.currentStep || 0, 0), 5);
                   return (
-                    <View key={r.id}>
-                      <View className={styles.tlRow}>
-                        <Text className={styles.tlKey}>整改单号</Text>
-                        <Text className={styles.tlVal}>{r.rectNo}</Text>
+                    <View key={s.id} className={styles.samplingCard}>
+                      <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Text style={{ fontWeight: 600, fontSize: 24 }}>组{idx + 1} · {s.samplingNo}</Text>
+                        <StatusTag text={stepLabel(step)} type={step >= 5 ? 'success' : (step >= 2 ? 'primary' : 'warning')} size='sm' />
                       </View>
-                      <View className={styles.tlRow}>
-                        <Text className={styles.tlKey}>整改状态</Text>
-                        <Text className={styles.tlVal}>
-                          {r.status === 'approved' ? '✅ 已完成' : '⏳ ' + map[r.status]}
-                        </Text>
+                      <View style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 22, color: '#4E5969', marginBottom: 8 }}>
+                        <Text>👁️ 见证人：{s.witnessName}</Text>
+                        <Text>📐 {s.quantity}{s.unit}</Text>
+                        <Text>🏛️ {s.labName || '—'}</Text>
                       </View>
-                      <View className={styles.tlRow}>
-                        <Text className={styles.tlKey}>问题描述</Text>
-                        <Text className={styles.tlVal}>{r.title}</Text>
+                      <View style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                        {SAMPLING_STEP_LABELS.map((lbl, i) => (
+                          <View key={i} style={{
+                            flex: 1, height: 8, borderRadius: 4,
+                            background: i <= step ? stepColors[step] : '#F2F3F5',
+                            position: 'relative'
+                          }} />
+                        ))}
+                      </View>
+                      <View style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4, fontSize: 20, color: '#86909C' }}>
+                        <Text>待取样</Text>
+                        <Text>报告出具</Text>
                       </View>
                     </View>
                   );
-                })}
-                <View className={styles.tlActions}>
-                  <View
-                    className={classnames(styles.tlBtn, styles.tlBtnPrimary)}
-                    onClick={() => Taro.navigateTo({ url: '/pages/rectification/index' })}
-                  >
-                    <Text>查看整改详情</Text>
-                  </View>
-                </View>
-              </View>
+                })
+              )}
             </View>
           </View>
-        )}
-      </View>
-
-      <View className={styles.section}>
-        <View className={styles.sectionHead}>
-          <Text className={styles.sectionName}>📍 使用范围分布（共{relatedInstalls.length}处）</Text>
         </View>
-        {hasInstall ? (
-          relatedInstalls.map(r => {
-            const mat = r.materials.find(m => m.batchNo === batchNo);
-            return (
-              <View key={r.id} className={styles.usageItem}>
-                <View className={styles.usageIcon}><Text>🏢</Text></View>
-                <View className={styles.usageInfo}>
-                  <Text className={styles.usageLoc}>{r.building} {r.floor} · {r.area}</Text>
-                  <Text className={styles.usageComp}>构件：{r.componentName}（{r.componentCode}）</Text>
-                  <Text className={styles.usageTeam}>👷 {r.teamName} · 班组长 {r.teamLeader}</Text>
-                </View>
-                <View className={styles.usageQty}>
-                  <Text className={styles.qtyNum}>{mat?.quantity || 0}</Text>
-                  <Text className={styles.qtyUnit}>{mat?.unit}</Text>
-                </View>
-              </View>
-            );
-          })
-        ) : (
-          <Text style={{ fontSize: 24, color: '#86909C', textAlign: 'center', padding: '32rpx 0' }}>
-            暂无安装使用记录
-          </Text>
-        )}
-      </View>
 
-      <View className={styles.bottomFloat}>
-        <View className={classnames(styles.floatBtn, styles.btnExport)} onClick={handleExport}>
+        {/* Step3 检测结论 */}
+        <View className={styles.tlItem}>
+          <View className={styles.tlLine} />
+          <View className={classnames(styles.tlDot, relatedInspections.length > 0 ? styles.dotDone : styles.dotPending)}><Text>3</Text></View>
+          <View className={styles.tlContent}>
+            <View className={styles.tlHeader}>
+              <Text className={styles.tlName}>📊 检测报告（{relatedInspections.length}份）</Text>
+              <Text className={styles.tlTime}>{relatedInspections[0]?.reportDate || '待检测'}</Text>
+            </View>
+            <View className={styles.tlBody}>
+              {relatedInspections.length === 0 ? (
+                <Text style={{ fontSize: 24, color: '#86909C', padding: '12rpx 0' }}>⏳ 等待实验室出具检测报告</Text>
+              ) : (
+                relatedInspections.map(i => {
+                  const cm = INSPECTION_CONCLUSION_MAP[i.conclusion] || { label: '未知', type: 'info' as const };
+                  return (
+                    <View key={i.id} className={styles.samplingCard}>
+                      <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <Text style={{ fontWeight: 600, fontSize: 24 }}>{i.reportNo}</Text>
+                        <StatusTag text={cm.label} type={cm.type as any} size='sm' />
+                      </View>
+                      <View style={{ fontSize: 22, color: '#4E5969', lineHeight: 1.8 }}>
+                        <Text>📅 {i.reportDate} · 🏛️ {i.labName}</Text>
+                        {i.unqualifiedItems && i.unqualifiedItems.length > 0 && (
+                          <Text style={{ color: '#F53F3F' }}>
+                            {'\n'}⚠️ 不合格项：{i.unqualifiedItems.join('、')}
+                          </Text>
+                        )}
+                        {i.remarks && <Text style={{ color: '#86909C' }}>{'\n'}备注：{i.remarks}</Text>}
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Step4 安装使用 */}
+        <View className={styles.tlItem}>
+          <View className={styles.tlLine} />
+          <View className={classnames(styles.tlDot, hasInstall ? styles.dotDone : styles.dotPending)}><Text>4</Text></View>
+          <View className={styles.tlContent}>
+            <View className={styles.tlHeader}>
+              <Text className={styles.tlName}>📍 安装使用（{relatedInstalls.length}处 · {totalQty}{totalUnit}）</Text>
+              <Text className={styles.tlTime}>{relatedInstalls[0]?.installDate || '待安装'}</Text>
+            </View>
+            <View className={styles.tlBody}>
+              {relatedInstalls.length === 0 ? (
+                <Text style={{ fontSize: 24, color: '#86909C', padding: '12rpx 0' }}>⏳ 尚未分配安装位置，检测合格后可登记</Text>
+              ) : (
+                relatedInstalls.map(r => {
+                  const m = r.materials.find(x => x.batchNo === batchNo);
+                  return (
+                    <View key={r.id} className={styles.samplingCard}>
+                      <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={{ fontWeight: 600, fontSize: 24, display: 'block', marginBottom: 4 }}>
+                            🏢 {r.building} {r.floor} · {r.componentName}
+                          </Text>
+                          <Text style={{ fontSize: 22, color: '#4E5969', lineHeight: 1.6, display: 'block' }}>
+                            👷 班组：{r.teamName} · {r.teamLeader || ''}
+                          </Text>
+                          {m && (
+                            <Text style={{ fontSize: 22, color: '#1E6FFF', display: 'block', marginTop: 2 }}>
+                              📦 用料：{m.materialName} · {m.quantity}{m.unit}
+                            </Text>
+                          )}
+                        </View>
+                        <View
+                          className={styles.tlBtn}
+                          onClick={() => Taro.navigateTo({ url: '/pages/install-location/index' })}
+                          style={{ padding: '4rpx 12rpx', fontSize: 20, height: 40, lineHeight: '32rpx' }}
+                        >
+                          <Text>位置</Text>
+                        </View>
+                      </View>
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Step5 整改记录 */}
+        <View className={styles.tlItem}>
+          <View className={classnames(styles.tlDot, hasRect ? styles.dotDone : styles.dotPending)}><Text>5</Text></View>
+          <View className={styles.tlContent}>
+            <View className={styles.tlHeader}>
+              <Text className={styles.tlName}>🛠️ 整改记录（{relatedRects.length}项）</Text>
+              <Text className={styles.tlTime}>{relatedRects[0]?.createdAt || '无整改'}</Text>
+            </View>
+            <View className={styles.tlBody}>
+              {relatedRects.length === 0 ? (
+                <Text style={{ fontSize: 24, color: '#00B42A', padding: '12rpx 0' }}>✅ 批次合格，无整改记录</Text>
+              ) : (
+                relatedRects.map(r => {
+                  const rsm = RECTIFICATION_STATUS_MAP[r.status];
+                  const prm = RECTIFICATION_PRIORITY_MAP[r.priority];
+                  return (
+                    <View key={r.id} className={styles.samplingCard}>
+                      <View style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' }}>
+                        <Text style={{ fontWeight: 600, fontSize: 24 }}>🔧 {r.rectNo}</Text>
+                        <View style={{ padding: '2rpx 10rpx', borderRadius: 8, background: prm.bg, color: prm.color, fontSize: 20 }}>{prm.label}</View>
+                        <StatusTag text={rsm.label} type={rsm.type as any} size='sm' />
+                      </View>
+                      <Text style={{ fontSize: 22, color: '#4E5969', lineHeight: 1.6, display: 'block', marginBottom: 6 }}>
+                        📝 {r.description}
+                      </Text>
+                      {r.timeline && r.timeline.slice(-1)[0] && (
+                        <Text style={{ fontSize: 20, color: '#86909C' }}>
+                          最新：{r.timeline[r.timeline.length - 1].action} · {r.timeline[r.timeline.length - 1].operator} · {r.timeline[r.timeline.length - 1].time}
+                        </Text>
+                      )}
+                    </View>
+                  );
+                })
+              )}
+            </View>
+          </View>
+        </View>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
+
+      {/* 底部按钮栏 */}
+      <View className={styles.bottomBar}>
+        <View className={styles.bottomBtnGhost} onClick={() => Taro.navigateTo({ url: '/pages/install-location/index' })}>
+          <Text>📍 查看使用位置</Text>
+        </View>
+        <View className={styles.bottomBtnPrimary} onClick={handleExport}>
           <Text>📄 导出台账</Text>
         </View>
-        <View
-          className={classnames(styles.floatBtn, styles.btnShare)}
-          onClick={() => Taro.showToast({ title: '生成追溯码成功', icon: 'success' })}
-        >
-          <Text>� 生成追溯码</Text>
-        </View>
       </View>
 
+      {/* 导出台账弹窗 */}
       {showExport && (
-        <View style={{
-          position: 'fixed', left: 0, right: 0, top: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.5)', zIndex: 999,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32
-        }} onClick={() => setShowExport(false)}>
-          <View
-            style={{
-              width: '100%',
-              maxHeight: '80vh',
-              background: '#fff',
-              borderRadius: 16,
-              overflow: 'hidden'
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <View style={{
-              padding: '24rpx 28rpx',
-              borderBottom: '1rpx solid #F2F3F5',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <Text style={{ fontSize: 28, fontWeight: 700, color: '#1D2129' }}>
-                📄 追溯台账预览
-              </Text>
-              <Text
-                onClick={handleCopy}
-                style={{
-                  fontSize: 24, color: '#1E6FFF', fontWeight: 500,
-                  padding: '8rpx 20rpx',
-                  background: 'rgba(30,111,255,0.08)',
-                  borderRadius: 20
-                }}
-              >
-                📋 复制全部
-              </Text>
+        <View className={styles.modalMask} onClick={() => setShowExport(false)}>
+          <View className={styles.modalBox} onClick={e => e.stopPropagation()}>
+            <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 30, fontWeight: 700 }}>📄 验收台账预览</Text>
+              <Text style={{ color: '#86909C', fontSize: 22 }} onClick={() => setShowExport(false)}>✕ 关闭</Text>
             </View>
-            <ScrollView scrollY style={{ maxHeight: '55vh', padding: 24 }}>
-              <Text selectable style={{
-                fontSize: 20,
-                lineHeight: 1.8,
-                color: '#1D2129',
-                fontFamily: 'Consolas, monospace',
-                whiteSpace: 'pre-wrap'
-              }}>
-                {exportText}
+            <ScrollView scrollY className={styles.exportArea}>
+              <Text style={{ whiteSpace: 'pre-wrap', fontSize: 24, lineHeight: 1.8, color: '#1D2129', fontFamily: 'monospace' }}>
+                {exportText || '暂无台账内容'}
               </Text>
             </ScrollView>
-            <View style={{
-              padding: 24,
-              borderTop: '1rpx solid #F2F3F5',
-              display: 'flex', gap: 16
-            }}>
-              <View
-                onClick={() => setShowExport(false)}
-                style={{
-                  flex: 1, height: 76, borderRadius: 12,
-                  background: '#F2F3F5', color: '#4E5969',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 26, fontWeight: 600
-                }}
-              >
+            <View style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+              <View className={styles.tlBtnGhost} onClick={() => setShowExport(false)} style={{ flex: 1, justifyContent: 'center' }}>
                 <Text>关闭</Text>
               </View>
-              <View
-                onClick={handleCopy}
-                style={{
-                  flex: 1.2, height: 76, borderRadius: 12,
-                  background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)', color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 26, fontWeight: 600
-                }}
-              >
-                <Text>复制台账内容</Text>
+              <View className={styles.bottomBtnPrimary} onClick={handleCopy} style={{ flex: 1 }}>
+                <Text>📋 复制全部</Text>
               </View>
             </View>
           </View>

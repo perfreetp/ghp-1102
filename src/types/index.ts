@@ -131,7 +131,7 @@ export interface InstallRecord {
   building: string;
   floor: string;
   area: string;
-  unit?: string;
+  buildingUnit?: string;
   componentName: string;
   componentCode: string;
   teamName: string;
@@ -139,7 +139,7 @@ export interface InstallRecord {
   teamPhone: string;
   installDate: string;
   quantity: number;
-  unit: string;
+  qtyUnit: string;
   materials: InstallMaterialItem[];
   installPhotos: string[];
   status: 'installed' | 'inspected' | 'accepted';

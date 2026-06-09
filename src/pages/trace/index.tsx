@@ -3,24 +3,26 @@ import { View, Text, Input } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
-import { currentProjectId } from '@/data/projects';
-import { getArrivalsByProject, arrivalStatusMap } from '@/data/arrivals';
-import { getSamplingsByArrival, samplingStatusMap } from '@/data/sampling';
-import { getInspectionsByArrival, inspectionConclusionMap } from '@/data/inspection';
-import { getInstallsByBatch, installStatusMap, buildings } from '@/data/trace';
-import { getRectificationsByProject, rectificationStatusMap } from '@/data/rectification';
+import { useTraceStore } from '@/store/traceStore';
 import SearchBar from '@/components/SearchBar';
 import StatusTag from '@/components/StatusTag';
 import EmptyState from '@/components/EmptyState';
+import { ARRIVAL_STATUS, BUILDINGS, SAMPLING_STEP_LABELS, INSPECTION_CONCLUSION_MAP } from '@/data/constants';
 
 export default function TracePage() {
+  const store = useTraceStore();
   const [mode, setMode] = useState<'batch' | 'component'>('batch');
   const [query, setQuery] = useState('');
 
-  const projectArrivals = useMemo(() => getArrivalsByProject(currentProjectId), []);
-  const pendingRects = useMemo(() => getRectificationsByProject(currentProjectId).filter(
-    r => ['pending', 'processing', 'reviewing'].includes(r.status)
-  ), []);
+  const projectArrivals = store.arrivals;
+  const allSamplings = store.samplings;
+  const allInspections = store.inspections;
+  const allInstalls = store.installRecords;
+  const allRects = store.rectifications;
+
+  const pendingRects = useMemo(() => allRects.filter(
+    r => ['pending', 'processing', 'confirming'].includes(r.status)
+  ), [allRects]);
 
   const matchResults = useMemo(() => {
     if (!query) return [];
@@ -29,22 +31,8 @@ export default function TracePage() {
       a.batchNo.toLowerCase().includes(kw) ||
       a.materialName.toLowerCase().includes(kw)
     );
-    return matched.slice(0, 3);
+    return matched.slice(0, 5);
   }, [query, projectArrivals]);
-
-  const traceResult = matchResults[0];
-  const traceSamplings = traceResult ? getSamplingsByArrival(traceResult.id) : [];
-  const traceInspections = traceResult ? getInspectionsByArrival(traceResult.id) : [];
-  const traceInstalls = traceResult ? getInstallsByBatch(traceResult.batchNo) : [];
-
-  const entries = [
-    { icon: '🏗️', title: '按构件反查', desc: '从安装位置追溯材料批次来源', cls: styles.iconReverse, action: 'reverse' },
-    { icon: '📊', title: '按批次追溯', desc: '输入批号查看全生命周期', cls: styles.iconRange, action: 'batch' },
-    { icon: '📍', title: '安装位置', desc: '楼栋楼层分配、施工班组绑定', cls: styles.iconInstall, action: 'install' },
-    { icon: '📁', title: '导出台账', desc: '验收记录、取样、检测数据导出', cls: styles.iconExport, action: 'export' },
-    { icon: '🧪', title: '检测管理', desc: '录入结论、拦截不合格批次', cls: styles.iconInspect, action: 'inspect' },
-    { icon: '🛠️', title: '整改跟踪', desc: `${pendingRects.length}项待处理整改`, cls: styles.iconRect, action: 'rect' }
-  ];
 
   const handleEntry = (action: string) => {
     switch (action) {
@@ -52,7 +40,7 @@ export default function TracePage() {
         setMode('component');
         break;
       case 'batch':
-        setMode('batch');
+        Taro.navigateTo({ url: '/pages/batch-detail/index' });
         break;
       case 'install':
         Taro.navigateTo({ url: '/pages/install-location/index' });
@@ -60,7 +48,7 @@ export default function TracePage() {
       case 'export':
         Taro.showActionSheet({
           itemList: ['导出来货验收台账', '导出取样送检台账', '导出检测报告台账', '导出整改记录'],
-          success: (res) => {
+          success: () => {
             Taro.showToast({ title: '已生成导出文件', icon: 'success' });
           }
         });
@@ -82,6 +70,24 @@ export default function TracePage() {
     Taro.navigateTo({ url: `/pages/arrival-detail/index?id=${id}` });
   };
 
+  const getSamplingsOfArrival = (arrivalId: string) =>
+    allSamplings.filter(s => s.arrivalId === arrivalId);
+
+  const getInspectionsOfArrival = (arrivalId: string) =>
+    allInspections.filter(i => i.arrivalId === arrivalId);
+
+  const getInstallsOfBatch = (batchNo: string) =>
+    allInstalls.filter(rec => rec.materials.some(m => m.batchNo === batchNo));
+
+  const entries = [
+    { icon: '🏗️', title: '按构件反查', desc: '从安装位置追溯材料批次来源', cls: styles.iconReverse, action: 'reverse' },
+    { icon: '📊', title: '按批次追溯', desc: '输入批号查看全生命周期', cls: styles.iconRange, action: 'batch' },
+    { icon: '📍', title: '安装位置', desc: `楼栋分配 · ${allInstalls.length}条记录`, cls: styles.iconInstall, action: 'install' },
+    { icon: '📁', title: '导出台账', desc: '验收记录、取样、检测数据导出', cls: styles.iconExport, action: 'export' },
+    { icon: '🧪', title: '检测管理', desc: `录入结论 · ${allInspections.length}份报告`, cls: styles.iconInspect, action: 'inspect' },
+    { icon: '🛠️', title: '整改跟踪', desc: `${pendingRects.length}项待处理整改`, cls: styles.iconRect, action: 'rect' }
+  ];
+
   return (
     <View className='pageContainer'>
       <View className='pageHeader'>
@@ -90,7 +96,7 @@ export default function TracePage() {
       </View>
 
       {pendingRects.length > 0 && (
-        <View className={styles.warningBanner}>
+        <View className={styles.warningBanner} onClick={() => handleEntry('rect')}>
           <Text className={styles.warningIcon}>⚠️</Text>
           <View className={styles.warningContent}>
             <Text className={styles.warningTitle}>
@@ -127,21 +133,28 @@ export default function TracePage() {
               <View className={styles.inputBox}>
                 <Input
                   className={styles.input}
-                  placeholder={mode === 'batch' ? '请输入批次号或材料名称' : '选择楼栋楼层构件名称'}
+                  placeholder='请输入批次号或材料名称（如 HC20260610-001）'
                   value={query}
                   onInput={(e) => setQuery(e.detail.value)}
                   confirmType='search'
+                  onConfirm={() => matchResults.length > 0 ? handleGoBatchDetail(matchResults[0].batchNo) : null}
                 />
               </View>
               <View
                 className={styles.searchBtn}
-                onClick={() => handleGoBatchDetail(query || 'HC20260610-001')}
+                onClick={() => {
+                  if (matchResults.length > 0) {
+                    handleGoBatchDetail(matchResults[0].batchNo);
+                  } else {
+                    Taro.showToast({ title: '未找到该批号', icon: 'none' });
+                  }
+                }}
               >
                 <Text>查询</Text>
               </View>
             </View>
             <View className={styles.quickTags}>
-              {['HC20260610-001', '钢筋', 'DT20260606-017', 'KP20260604-012'].map(t => (
+              {['HC20260610-001', 'SN20260610-008', 'HT20260609-015', 'DT20260606-017'].map(t => (
                 <View key={t} className={styles.quickTag} onClick={() => setQuery(t)}>
                   <Text>{t}</Text>
                 </View>
@@ -151,9 +164,11 @@ export default function TracePage() {
         ) : (
           <>
             <View className={styles.quickTags} style={{ marginBottom: 16 }}>
-              {buildings.slice(1).map(b => (
-                <View key={b.value} className={styles.quickTag}>
-                  <Text>{b.label}</Text>
+              {BUILDINGS.slice(1).map(b => (
+                <View key={b} className={styles.quickTag} onClick={() => {
+                  Taro.navigateTo({ url: '/pages/install-location/index' });
+                }}>
+                  <Text>📍 {b}</Text>
                 </View>
               ))}
             </View>
@@ -181,13 +196,20 @@ export default function TracePage() {
             <EmptyState title='未匹配到批次' description='请输入正确的批号或材料名' />
           ) : (
             matchResults.map(a => {
-              const asm = arrivalStatusMap[a.status];
+              const asm = ARRIVAL_STATUS[a.status];
+              const traceSamplings = getSamplingsOfArrival(a.id);
+              const traceInspections = getInspectionsOfArrival(a.id);
+              const traceInstalls = getInstallsOfBatch(a.batchNo);
               const hasUnqualified = traceInspections.some(i => i.conclusion === 'unqualified');
+
+              const stepLabel = (step: number) =>
+                SAMPLING_STEP_LABELS[Math.min(step, SAMPLING_STEP_LABELS.length - 1)] || '待开始';
+
               return (
-                <View key={a.id} className={styles.resultCard} onClick={() => handleGoArrival(a.id)}>
-                  <View className={styles.resultHeader}>
+                <View key={a.id} className={styles.resultCard}>
+                  <View className={styles.resultHeader} onClick={() => handleGoArrival(a.id)}>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text className={styles.resultTitle}>{a.materialName}</Text>
+                      <Text className={styles.resultTitle}>{a.materialName} {a.spec}</Text>
                       <Text className={styles.resultBatch}>批次：{a.batchNo}</Text>
                     </View>
                     <StatusTag text={asm.label} type={asm.type} size='sm' />
@@ -201,18 +223,18 @@ export default function TracePage() {
 
                   <View className={styles.pathBox}>
                     {[
-                      { step: '📦 到货验收', info: `${a.arrivalTime} · ${a.receiver} + ${a.witness}` },
+                      { step: '📦 到货验收', info: `${a.arrivalTime} · 验收：${a.receiver} · 监理：${a.witness || '待签字'}` },
                       { step: `🧪 取样送检（${traceSamplings.length}组）`,
                         info: traceSamplings.length > 0
-                          ? `${traceSamplings.map(s => samplingStatusMap[s.status].label).join('、')}`
+                          ? `${traceSamplings.map(s => stepLabel(s.currentStep)).join('、')}`
                           : '尚未取样' },
                       { step: `📊 检测报告（${traceInspections.length}份）`,
                         info: traceInspections.length > 0
-                          ? `${traceInspections.map(i => inspectionConclusionMap[i.conclusion].label).join('、')}`
+                          ? `${traceInspections.map(i => INSPECTION_CONCLUSION_MAP[i.conclusion]?.label || '检测中').join('、')}`
                           : '等待检测' },
                       { step: `📍 安装记录（${traceInstalls.length}处）`,
                         info: traceInstalls.length > 0
-                          ? `涉及${[...new Set(traceInstalls.map(i => i.building))].length}栋 · ${installStatusMap[traceInstalls[0]?.status || 'installed'].label}`
+                          ? `涉及${[...new Set(traceInstalls.map(i => i.building))].length}栋 · ${traceInstalls.map(i => i.componentName).slice(0, 2).join('、')}${traceInstalls.length > 2 ? '…' : ''}`
                           : '尚未分配安装位置' }
                     ].map((p, i) => (
                       <View key={i} className={styles.pathNode}>
@@ -226,19 +248,34 @@ export default function TracePage() {
                   </View>
 
                   <View className={styles.statRow}>
-                    <View className={styles.statCol}>
+                    <View className={styles.statCol} onClick={(e) => { e.stopPropagation(); Taro.switchTab({ url: '/pages/sampling/index' }); }}>
                       <Text className={styles.statNum}>{traceSamplings.length}</Text>
                       <Text className={styles.statLabel}>取样组数</Text>
                     </View>
                     <View className={styles.statCol}>
-                      <Text className={styles.statNum} style={{ color: traceInspections.every(i => i.conclusion === 'qualified') ? '#00B42A' : '#F53F3F' }}>
+                      <Text className={styles.statNum} style={{ color: traceInspections.length > 0 && traceInspections.every(i => i.conclusion === 'qualified') ? '#00B42A' : (traceInspections.length === 0 ? '#86909C' : '#F53F3F') }}>
                         {traceInspections.length}
                       </Text>
                       <Text className={styles.statLabel}>检测报告</Text>
                     </View>
-                    <View className={styles.statCol}>
+                    <View className={styles.statCol} onClick={(e) => { e.stopPropagation(); Taro.navigateTo({ url: '/pages/install-location/index' }); }}>
                       <Text className={styles.statNum} style={{ color: '#722ED1' }}>{traceInstalls.length}</Text>
                       <Text className={styles.statLabel}>安装位置</Text>
+                    </View>
+                  </View>
+
+                  <View className={styles.actionRow}>
+                    <View
+                      className={styles.primaryActionBtn}
+                      onClick={() => handleGoBatchDetail(a.batchNo)}
+                    >
+                      <Text>📊 查看完整追溯链路</Text>
+                    </View>
+                    <View
+                      className={styles.secondaryActionBtn}
+                      onClick={() => handleGoArrival(a.id)}
+                    >
+                      <Text>📦 到货详情</Text>
                     </View>
                   </View>
                 </View>
@@ -251,18 +288,18 @@ export default function TracePage() {
       {!query && (
         <View style={{ marginTop: 8 }}>
           <Text className='cardTitle' style={{ marginBottom: 16 }}>快速查询入口</Text>
-          {projectArrivals.slice(0, 3).map(a => (
-            <View key={a.id} className={styles.resultCard} onClick={() => handleGoArrival(a.id)}>
+          {projectArrivals.slice(0, 4).map(a => (
+            <View key={a.id} className={styles.resultCard}>
               <View className={styles.resultHeader}>
-                <View>
-                  <Text className={styles.resultTitle}>{a.materialName}</Text>
-                  <Text className={styles.resultBatch}>{a.batchNo}</Text>
+                <View style={{ flex: 1 }} onClick={() => handleGoArrival(a.id)}>
+                  <Text className={styles.resultTitle}>{a.materialName} {a.spec}</Text>
+                  <Text className={styles.resultBatch}>批次：{a.batchNo} · {a.supplierName}</Text>
                 </View>
                 <View className={styles.quickTag} onClick={(e) => {
                   e.stopPropagation();
-                  setQuery(a.batchNo);
+                  handleGoBatchDetail(a.batchNo);
                 }}>
-                  <Text style={{ color: '#1E6FFF' }}>查看追溯链路 →</Text>
+                  <Text style={{ color: '#1E6FFF' }}>追溯链路 →</Text>
                 </View>
               </View>
             </View>

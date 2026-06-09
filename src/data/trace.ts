@@ -7,7 +7,7 @@ export const installRecords: InstallRecord[] = [
     building: '3号楼',
     floor: 'B2层',
     area: '基础底板B区',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '基础底板主筋',
     componentCode: 'KZ-JC-B12',
     teamName: '上海建工钢筋班组一组',
@@ -15,15 +15,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13811112222',
     installDate: '2026-06-11',
     quantity: 18.5,
-    unit: '吨',
+    qtyUnit: '吨',
     materials: [
-      {
-        batchNo: 'HC20260610-001',
-        materialName: '热轧带肋钢筋 HRB400E',
-        spec: 'Φ25mm×9m HRB400E',
-        quantity: 18.5,
-        unit: '吨'
-      }
+      { batchNo: 'HC20260610-001', materialName: '热轧带肋钢筋 HRB400E', spec: 'Φ25mm×9m HRB400E', quantity: 18.5, unit: '吨' }
     ],
     installPhotos: ['https://picsum.photos/id/1082/750/500'],
     status: 'accepted',
@@ -35,7 +29,7 @@ export const installRecords: InstallRecord[] = [
     building: '3号楼',
     floor: 'B2层',
     area: '框架柱C区',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '框架柱主筋(基础顶~-0.050)',
     componentCode: 'KZ-01~12',
     teamName: '上海建工钢筋班组一组',
@@ -43,15 +37,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13811112222',
     installDate: '2026-06-12',
     quantity: 22.3,
-    unit: '吨',
+    qtyUnit: '吨',
     materials: [
-      {
-        batchNo: 'HC20260610-001',
-        materialName: '热轧带肋钢筋 HRB400E',
-        spec: 'Φ25mm×9m HRB400E',
-        quantity: 22.3,
-        unit: '吨'
-      }
+      { batchNo: 'HC20260610-001', materialName: '热轧带肋钢筋 HRB400E', spec: 'Φ25mm×9m HRB400E', quantity: 22.3, unit: '吨' }
     ],
     installPhotos: ['https://picsum.photos/id/1036/750/500'],
     status: 'inspected',
@@ -61,9 +49,9 @@ export const installRecords: InstallRecord[] = [
     id: 'INST003',
     projectId: 'P001',
     building: '2号楼',
-    floor: '3F',
+    floor: '3层',
     area: '砌体施工A区',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '3层内墙砌筑',
     componentCode: 'QT-2-3-01',
     teamName: '安徽中天砌筑班组',
@@ -71,22 +59,10 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13877778888',
     installDate: '2026-06-10',
     quantity: 2800,
-    unit: '块',
+    qtyUnit: '块',
     materials: [
-      {
-        batchNo: 'HT20260609-015',
-        materialName: '蒸压加气混凝土砌块',
-        spec: '600×200×200mm A5.0 B06',
-        quantity: 2800,
-        unit: '块'
-      },
-      {
-        batchNo: 'KP20260604-012',
-        materialName: '烧结多孔页岩砖 MU15',
-        spec: '240×115×90mm MU15',
-        quantity: 480,
-        unit: '块'
-      }
+      { batchNo: 'HT20260609-015', materialName: '蒸压加气混凝土砌块', spec: '600×200×200mm A5.0 B06', quantity: 2800, unit: '块' },
+      { batchNo: 'KP20260604-012', materialName: '烧结多孔页岩砖 MU15', spec: '240×115×90mm MU15', quantity: 480, unit: '块' }
     ],
     installPhotos: ['https://picsum.photos/id/201/750/500'],
     status: 'accepted',
@@ -96,9 +72,9 @@ export const installRecords: InstallRecord[] = [
     id: 'INST004',
     projectId: 'P001',
     building: '3号楼',
-    floor: '4F',
+    floor: '4层',
     area: '电梯井周边',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '4层外围填充墙',
     componentCode: 'QT-3-4-02',
     teamName: '安徽中天砌筑班组',
@@ -106,15 +82,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13877778888',
     installDate: '2026-06-11',
     quantity: 3200,
-    unit: '块',
+    qtyUnit: '块',
     materials: [
-      {
-        batchNo: 'HT20260609-015',
-        materialName: '蒸压加气混凝土砌块',
-        spec: '600×200×200mm A5.0 B06',
-        quantity: 3200,
-        unit: '块'
-      }
+      { batchNo: 'HT20260609-015', materialName: '蒸压加气混凝土砌块', spec: '600×200×200mm A5.0 B06', quantity: 3200, unit: '块' }
     ],
     installPhotos: ['https://picsum.photos/id/225/750/500'],
     status: 'installed',
@@ -126,7 +96,7 @@ export const installRecords: InstallRecord[] = [
     building: '5号楼',
     floor: '1-3层',
     area: '立管井',
-    unit: '1-2单元',
+    buildingUnit: '1-2单元',
     componentName: '污水立管安装',
     componentCode: 'PS-5-01',
     teamName: '南通华新建工水电班组',
@@ -134,15 +104,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13933334444',
     installDate: '2026-06-09',
     quantity: 450,
-    unit: '米',
+    qtyUnit: '米',
     materials: [
-      {
-        batchNo: 'PJ20260607-025',
-        materialName: 'PVC-U排水管 DN110',
-        spec: 'DN110 国标 4米/根',
-        quantity: 450,
-        unit: '米'
-      }
+      { batchNo: 'PJ20260607-025', materialName: 'PVC-U排水管 DN110', spec: 'DN110 国标 4米/根', quantity: 450, unit: '米' }
     ],
     installPhotos: ['https://picsum.photos/id/1039/750/500'],
     status: 'accepted',
@@ -161,15 +125,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13655556666',
     installDate: '2026-06-08',
     quantity: 320,
-    unit: '米',
+    qtyUnit: '米',
     materials: [
-      {
-        batchNo: 'DT20260606-017',
-        materialName: '交联聚乙烯绝缘电缆 YJV',
-        spec: 'YJV-4×95+1×50',
-        quantity: 320,
-        unit: '米'
-      }
+      { batchNo: 'DT20260606-017', materialName: '交联聚乙烯绝缘电缆 YJV', spec: 'YJV-4×95+1×50', quantity: 320, unit: '米' }
     ],
     installPhotos: ['https://picsum.photos/id/119/750/500'],
     status: 'inspected',
@@ -188,15 +146,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13655556666',
     installDate: '2026-06-10',
     quantity: 480,
-    unit: '米',
+    qtyUnit: '米',
     materials: [
-      {
-        batchNo: 'DT20260606-017',
-        materialName: '交联聚乙烯绝缘电缆 YJV',
-        spec: 'YJV-4×95+1×50',
-        quantity: 480,
-        unit: '米'
-      }
+      { batchNo: 'DT20260606-017', materialName: '交联聚乙烯绝缘电缆 YJV', spec: 'YJV-4×95+1×50', quantity: 480, unit: '米' }
     ],
     installPhotos: ['https://picsum.photos/id/160/750/500'],
     status: 'installed',
@@ -206,9 +158,9 @@ export const installRecords: InstallRecord[] = [
     id: 'INST008',
     projectId: 'P001',
     building: '2号楼',
-    floor: '3-6层',
+    floor: '3-5层',
     area: 'A/B户型',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '室内填充墙砌筑',
     componentCode: 'QT-2-3-02',
     teamName: '安徽中天砌筑班组',
@@ -216,15 +168,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13877778888',
     installDate: '2026-06-06',
     quantity: 18000,
-    unit: '块',
+    qtyUnit: '块',
     materials: [
-      {
-        batchNo: 'KP20260604-012',
-        materialName: '烧结多孔页岩砖 MU15',
-        spec: '240×115×90mm MU15',
-        quantity: 18000,
-        unit: '块'
-      }
+      { batchNo: 'KP20260604-012', materialName: '烧结多孔页岩砖 MU15', spec: '240×115×90mm MU15', quantity: 18000, unit: '块' }
     ],
     installPhotos: ['https://picsum.photos/id/201/750/500'],
     status: 'accepted',
@@ -234,9 +180,9 @@ export const installRecords: InstallRecord[] = [
     id: 'INST009',
     projectId: 'P001',
     building: '2号楼',
-    floor: '7-9层',
+    floor: '7-10层',
     area: 'C户型厨卫周边',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '厨卫周边墙体',
     componentCode: 'QT-2-7-01',
     teamName: '安徽中天砌筑班组',
@@ -244,15 +190,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13877778888',
     installDate: '2026-06-08',
     quantity: 12000,
-    unit: '块',
+    qtyUnit: '块',
     materials: [
-      {
-        batchNo: 'KP20260604-012',
-        materialName: '烧结多孔页岩砖 MU15',
-        spec: '240×115×90mm MU15',
-        quantity: 12000,
-        unit: '块'
-      }
+      { batchNo: 'KP20260604-012', materialName: '烧结多孔页岩砖 MU15', spec: '240×115×90mm MU15', quantity: 12000, unit: '块' }
     ],
     installPhotos: ['https://picsum.photos/id/225/750/500'],
     status: 'inspected',
@@ -271,15 +211,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13822334455',
     installDate: '2026-06-10',
     quantity: 4.8,
-    unit: '吨',
+    qtyUnit: '吨',
     materials: [
-      {
-        batchNo: 'HC20260610-001',
-        materialName: '热轧带肋钢筋 HRB400E',
-        spec: 'Φ25mm×9m HRB400E',
-        quantity: 4.8,
-        unit: '吨'
-      }
+      { batchNo: 'HC20260610-001', materialName: '热轧带肋钢筋 HRB400E', spec: 'Φ25mm×9m HRB400E', quantity: 4.8, unit: '吨' }
     ],
     installPhotos: ['https://picsum.photos/id/456/750/500'],
     status: 'installed',
@@ -289,9 +223,9 @@ export const installRecords: InstallRecord[] = [
     id: 'INST011',
     projectId: 'P001',
     building: '6号楼',
-    floor: '2F',
+    floor: '2层',
     area: '楼梯间',
-    unit: '1单元',
+    buildingUnit: '1单元',
     componentName: '踏步板浇筑钢筋',
     componentCode: 'LT-6-2-01',
     teamName: '上海建工钢筋班组二组',
@@ -299,15 +233,9 @@ export const installRecords: InstallRecord[] = [
     teamPhone: '13822334455',
     installDate: '2026-06-10',
     quantity: 1.2,
-    unit: '吨',
+    qtyUnit: '吨',
     materials: [
-      {
-        batchNo: 'HC20260610-001',
-        materialName: '热轧带肋钢筋 HRB400E',
-        spec: 'Φ25mm×9m HRB400E',
-        quantity: 1.2,
-        unit: '吨'
-      }
+      { batchNo: 'HC20260610-001', materialName: '热轧带肋钢筋 HRB400E', spec: 'Φ25mm×9m HRB400E', quantity: 1.2, unit: '吨' }
     ],
     installPhotos: ['https://picsum.photos/id/500/750/500'],
     status: 'accepted',
@@ -328,4 +256,4 @@ export const buildings = [
   { label: '地下车库', value: '地下车库' }
 ];
 
-export const floors = ['全部', 'B2层', 'B1层', '1F', '2F', '3F', '4F', '5F', '6F', '7F', '8F', '9F', '10F', '1-3层', '1-10层', '3-6层', '7-9层'];
+export const floors = ['全部', 'B2层', 'B1层', '1层', '2层', '3层', '4层', '5层', '6层', '7层', '10层', '1-3层', '1-10层', '3-5层', '7-10层'];

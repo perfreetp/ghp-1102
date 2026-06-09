@@ -8,9 +8,7 @@ import { useTraceStore } from '@/store/traceStore';
 import SearchBar from '@/components/SearchBar';
 import StatusTag from '@/components/StatusTag';
 import EmptyState from '@/components/EmptyState';
-
-const BUILDINGS = ['全部', '1号楼', '2号楼', '3号楼', '5号楼', '6号楼', '地下车库'];
-const FLOORS = ['全部', 'B2层', 'B1层', '1F', '2F', '3F', '4F', '5F', '6F', '7F', '8F', '9F', '10F', '1-3层', '1-10层', '3-6层', '7-9层'];
+import { BUILDINGS, FLOORS } from '@/data/constants';
 
 export default function InstallLocationPage() {
   const store = useTraceStore();
@@ -18,10 +16,10 @@ export default function InstallLocationPage() {
   const [buildingFilter, setBuildingFilter] = useState('全部');
   const [floorFilter, setFloorFilter] = useState('全部');
   const [selBuilding, setSelBuilding] = useState(BUILDINGS[0]);
-  const [selFloor, setSelFloor] = useState('5F');
+  const [selFloor, setSelFloor] = useState(FLOORS[1]);
   const [traceDetail, setTraceDetail] = useState<any>(null);
 
-  const allRecords = useMemo(() => store.getInstallsByProject(currentProjectId), [store]);
+  const allRecords = useMemo(() => store.getInstallsByProject(currentProjectId) || store.installRecords, [store]);
 
   const summary = useMemo(() => ({
     total: allRecords.length,
@@ -33,19 +31,46 @@ export default function InstallLocationPage() {
   const list = useMemo(() => {
     return allRecords.filter(r => {
       if (buildingFilter !== '全部' && r.building !== buildingFilter) return false;
-      if (floorFilter !== '全部' && r.floor !== floorFilter) return false;
+      if (floorFilter !== '全部') {
+        // 支持包含匹配，比如选3层，匹配3-5层
+        if (r.floor !== floorFilter && !r.floor.includes(floorFilter.replace('层', '')) && !floorFilter.includes(r.floor.replace('层', ''))) {
+          return false;
+        }
+      }
       if (search) {
         const kw = search.toLowerCase();
         return (
           r.building.toLowerCase().includes(kw) ||
           r.componentName.toLowerCase().includes(kw) ||
           r.teamName.toLowerCase().includes(kw) ||
+          (r.buildingUnit || '').toLowerCase().includes(kw) ||
           r.materials.some(m => m.batchNo.toLowerCase().includes(kw))
         );
       }
       return true;
     });
   }, [allRecords, search, buildingFilter, floorFilter]);
+
+  const handleScan = () => {
+    Taro.scanCode({
+      onlyFromCamera: false,
+      scanType: ['qrCode', 'barCode'],
+      success: (res) => {
+        const code = (res.result || '').trim();
+        setSearch(code);
+        Taro.showToast({ title: `扫码:${code.slice(0, 12)}…`, icon: 'none' });
+      },
+      fail: () => {
+        Taro.showActionSheet({
+          itemList: ['3号楼 · 基础底板主筋（INST001）', '2号楼 · 3层内墙砌筑（INST003）', '地下车库 · 主供电干线（INST006）', '6号楼 · 踏步板（INST011）'],
+          success: (r) => {
+            const searchMap = ['基础底板主筋', '3层内墙砌筑', '主供电干线', '踏步板'];
+            setSearch(searchMap[r.tapIndex]);
+          }
+        });
+      }
+    });
+  };
 
   return (
     <View className='pageContainer'>
@@ -55,10 +80,10 @@ export default function InstallLocationPage() {
       </View>
 
       <SearchBar
-        placeholder='搜索楼栋/构件/班组/批号'
+        placeholder='搜索楼栋/构件/班组/单元/批号'
         value={search}
         onChange={setSearch}
-        showScan
+        onScan={handleScan}
       />
 
       <View className={styles.summaryBar}>
@@ -85,7 +110,7 @@ export default function InstallLocationPage() {
           <View
             key={b}
             className={classnames(styles.tabItem, buildingFilter === b && styles.tabActive)}
-            onClick={() => setBuildingFilter(b)}
+            onClick={() => { setBuildingFilter(b); setSelBuilding(b); }}
           >
             <Text>{b}</Text>
           </View>
@@ -97,7 +122,7 @@ export default function InstallLocationPage() {
           <View
             key={f}
             className={classnames(styles.tabItem, floorFilter === f && styles.tabActive)}
-            onClick={() => setFloorFilter(f)}
+            onClick={() => { setFloorFilter(f); if (f !== '全部') setSelFloor(f); }}
           >
             <Text>{f}</Text>
           </View>
@@ -105,11 +130,11 @@ export default function InstallLocationPage() {
       </View>
 
       <View className={styles.floorPicker}>
-        <View className={styles.pickerCol} onClick={() => Taro.showActionSheet({ itemList: BUILDINGS, success: r => setSelBuilding(BUILDINGS[r.tapIndex]) })}>
+        <View className={styles.pickerCol} onClick={() => Taro.showActionSheet({ itemList: BUILDINGS, success: r => { setBuildingFilter(BUILDINGS[r.tapIndex]); setSelBuilding(BUILDINGS[r.tapIndex]); } })}>
           <Text className={styles.pickerLabel}>📍 楼栋</Text>
           <Text className={styles.pickerValue}>{selBuilding} ▾</Text>
         </View>
-        <View className={styles.pickerCol} onClick={() => Taro.showActionSheet({ itemList: FLOORS.slice(1), success: r => setSelFloor(FLOORS.slice(1)[r.tapIndex]) })}>
+        <View className={styles.pickerCol} onClick={() => Taro.showActionSheet({ itemList: FLOORS, success: r => { const f = FLOORS[r.tapIndex]; if (f !== '全部') { setSelFloor(f); setFloorFilter(f); } } })}>
           <Text className={styles.pickerLabel}>🏢 楼层</Text>
           <Text className={styles.pickerValue}>{selFloor} ▾</Text>
         </View>
@@ -122,7 +147,7 @@ export default function InstallLocationPage() {
       <View style={{ paddingBottom: 180 }}>
         {list.length === 0 ? (
           <EmptyState
-            title='暂无安装记录'
+            title={buildingFilter !== '全部' ? `${buildingFilter}暂无安装记录` : '暂无安装记录'}
             description='材料验收合格后可分配安装位置'
             actionText='去到货验收'
             onAction={() => Taro.switchTab({ url: '/pages/arrival/index' })}
@@ -131,9 +156,12 @@ export default function InstallLocationPage() {
           list.map(r => (
             <View key={r.id} className={styles.installCard}>
               <View className={styles.cardHeader}>
-                <Text className={styles.cardTitle}>{r.componentName}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text className={styles.cardTitle}>{r.componentName}</Text>
+                  <Text style={{ fontSize: 20, color: '#86909C' }}>{r.componentCode}</Text>
+                </View>
                 <View className={styles.locationBadge}>
-                  <Text>{r.building} {r.floor}</Text>
+                  <Text>{r.building} {r.floor}{r.buildingUnit ? ` · ${r.buildingUnit}` : ''}</Text>
                 </View>
               </View>
 
@@ -147,12 +175,12 @@ export default function InstallLocationPage() {
                   <Text className={styles.infoValue}>{r.installDate}</Text>
                 </View>
                 <View className={styles.infoItem}>
-                  <Text className={styles.infoLabel}>构件编号：</Text>
-                  <Text className={styles.infoValue}>{r.componentCode}</Text>
+                  <Text className={styles.infoLabel}>楼栋单元：</Text>
+                  <Text className={styles.infoValue}>{r.buildingUnit || '—'}</Text>
                 </View>
                 <View className={styles.infoItem}>
-                  <Text className={styles.infoLabel}>安装数量：</Text>
-                  <Text className={styles.infoValue}>{r.quantity} {r.unit}</Text>
+                  <Text className={styles.infoLabel}>构件数量：</Text>
+                  <Text className={styles.infoValue} style={{ color: '#FF7D00', fontWeight: 600 }}>{r.quantity} {r.qtyUnit}</Text>
                 </View>
               </View>
 
@@ -167,7 +195,7 @@ export default function InstallLocationPage() {
                   </View>
                   <View className={styles.teamDetails}>
                     <Text className={styles.teamName}>{r.teamName}</Text>
-                    <Text className={styles.teamLeader}>班组长：{r.teamLeader} · 联系 {r.teamPhone}</Text>
+                    <Text className={styles.teamLeader}>班组长：{r.teamLeader} · 📞 {r.teamPhone}</Text>
                   </View>
                 </View>
               </View>
@@ -180,7 +208,10 @@ export default function InstallLocationPage() {
                       <Text className={styles.matName}>{m.materialName}</Text>
                       <Text className={styles.matBatch}>批号：{m.batchNo}</Text>
                     </View>
-                    <Text className={styles.matQty}>{m.quantity}{m.unit}</Text>
+                    <View style={{ textAlign: 'right' }}>
+                      <Text className={styles.matQty}>{m.quantity}</Text>
+                      <Text style={{ fontSize: 18, color: '#86909C' }}>{m.unit}</Text>
+                    </View>
                   </View>
                 ))}
                 {r.materials.length > 3 && (
@@ -197,6 +228,7 @@ export default function InstallLocationPage() {
                     component: r.componentName,
                     building: r.building,
                     floor: r.floor,
+                    buildingUnit: r.buildingUnit,
                     area: r.area,
                     materials: r.materials
                   })}
@@ -205,7 +237,7 @@ export default function InstallLocationPage() {
                 </View>
                 <View
                   className={classnames(styles.actionBtn, styles.btnTrace)}
-                  onClick={() => Taro.navigateTo({ url: `/pages/batch-detail/index?batchNo=${r.materials[0]?.batchNo}` })}
+                  onClick={() => r.materials[0]?.batchNo && Taro.navigateTo({ url: `/pages/batch-detail/index?batchNo=${r.materials[0].batchNo}` })}
                 >
                   <Text>🔗 追溯批次</Text>
                 </View>
@@ -244,12 +276,12 @@ export default function InstallLocationPage() {
                 {traceDetail.component}
               </Text>
               <Text style={{ fontSize: 22, opacity: 0.85 }}>
-                {traceDetail.building} {traceDetail.floor} · {traceDetail.area}
+                {traceDetail.building} {traceDetail.floor}{traceDetail.buildingUnit ? ` · ${traceDetail.buildingUnit}` : ''} · {traceDetail.area}
               </Text>
             </View>
             <View style={{ padding: 20, maxHeight: '50vh', overflow: 'auto' }}>
               <Text style={{ fontSize: 22, color: '#86909C', display: 'block', marginBottom: 16 }}>
-                共使用 {traceDetail.materials.length} 项材料批次，点击查看详情追溯：
+                共使用 {traceDetail.materials.length} 项材料批次，点击查看完整追溯链路：
               </Text>
               {traceDetail.materials.map(m => {
                 const arr = store.arrivals.find(a => a.batchNo === m.batchNo);
@@ -269,16 +301,19 @@ export default function InstallLocationPage() {
                     }}
                   >
                     <View style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                      <View>
+                      <View style={{ flex: 1, minWidth: 0, paddingRight: 12 }}>
                         <Text style={{ fontSize: 26, fontWeight: 600, color: '#1D2129', display: 'block', marginBottom: 4 }}>
                           {m.materialName}
+                        </Text>
+                        <Text style={{ fontSize: 20, color: '#4E5969', display: 'block', marginBottom: 4 }}>
+                          {m.spec || ''}
                         </Text>
                         <Text style={{ fontSize: 22, color: '#1E6FFF', fontFamily: 'monospace' }}>
                           #{m.batchNo}
                         </Text>
                       </View>
-                      <View style={{ textAlign: 'right' }}>
-                        <Text style={{ fontSize: 30, fontWeight: 700, color: '#FF7D00' }}>{m.quantity}</Text>
+                      <View style={{ textAlign: 'right', flexShrink: 0 }}>
+                        <Text style={{ fontSize: 30, fontWeight: 700, color: '#FF7D00', display: 'block' }}>{m.quantity}</Text>
                         <Text style={{ fontSize: 20, color: '#86909C', display: 'block' }}>{m.unit}</Text>
                       </View>
                     </View>

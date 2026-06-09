@@ -89,11 +89,10 @@ export default function ArrivalPage() {
       </View>
 
       <SearchBar
-        placeholder='搜索材料名/批号/供应商'
+        placeholder='搜索批号/材料/供应商'
         value={searchText}
         onChange={setSearchText}
-        onConfirm={handleScan}
-        showScan
+        onScan={handleScan}
       />
 
       <View className={styles.summaryRow}>
