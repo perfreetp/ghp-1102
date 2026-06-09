@@ -3,6 +3,9 @@ import { View, Text, Image, Input, Textarea } from '@tarojs/components';
 import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
+import { useTraceStore } from '@/store/traceStore';
+import { currentProjectId } from '@/data/projects';
+import { Arrival } from '@/types';
 
 const STEPS = [
   { id: 1, name: '扫码登记' },
@@ -13,22 +16,28 @@ const STEPS = [
 ];
 
 const MATERIAL_TYPES = ['钢筋', '水泥', '砌体材料', '防水材料', '混凝土', '砂石骨料', '门窗', '管线', '其他'];
+const pad = (n: number) => String(n).padStart(2, '0');
+const nowStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
 
 export default function ArrivalCreatePage() {
+  const store = useTraceStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [form, setForm] = useState({
     batchNo: '',
-    materialType: '',
-    materialName: '',
-    spec: '',
+    materialType: '钢筋',
+    materialName: 'HRB400E钢筋',
+    spec: 'Φ25mm×9m HRB400E',
     contractSpec: 'Φ25mm×9m HRB400E',
-    quantity: '',
+    quantity: '35',
     unit: '吨',
-    supplier: '',
-    vehicleNo: '',
-    driverName: '',
-    driverPhone: '',
-    witness: '',
+    supplier: '华东钢铁集团',
+    vehicleNo: '沪A·8821X',
+    driverName: '张师傅',
+    driverPhone: '13800138000',
+    witness: '王建国',
     remarks: ''
   });
   const [nameplatePhoto, setNameplatePhoto] = useState<string | null>(null);
@@ -102,18 +111,56 @@ export default function ArrivalCreatePage() {
   };
 
   const handleSubmit = () => {
+    if (!form.batchNo) {
+      Taro.showToast({ title: '批号必填', icon: 'none' });
+      setCurrentStep(1);
+      return;
+    }
     Taro.showModal({
       title: '确认提交',
       content: '到货信息提交后将自动生成取样任务提醒',
       confirmColor: '#1E6FFF',
       success: res => {
         if (res.confirm) {
-          Taro.showLoading({ title: '提交中...' });
-          setTimeout(() => {
-            Taro.hideLoading();
-            Taro.showToast({ title: '登记成功', icon: 'success' });
-            setTimeout(() => Taro.navigateBack(), 1500);
-          }, 1200);
+          const id = 'ARR' + Date.now().toString().slice(-10);
+          const finalBatchNo = form.batchNo || ('NEW' + Date.now().toString().slice(-8));
+          const specMatch = form.spec && form.contractSpec &&
+            form.spec.replace(/\s/g, '').toLowerCase() === form.contractSpec.replace(/\s/g, '').toLowerCase();
+
+          const newArrival: Arrival = {
+            id,
+            projectId: currentProjectId,
+            batchNo: finalBatchNo,
+            materialType: form.materialType,
+            materialName: form.materialName || '新建材料',
+            spec: form.spec || '未填写',
+            contractSpec: form.contractSpec,
+            specMatched: specMatch,
+            quantity: parseFloat(form.quantity) || 0,
+            unit: form.unit,
+            supplier: form.supplier || '未填写供应商',
+            vehicleNo: form.vehicleNo,
+            driverName: form.driverName,
+            driverPhone: form.driverPhone,
+            receiver: '现场材料员',
+            witness: form.witness || '现场监理',
+            arrivalTime: nowStr(),
+            status: specMatch ? 'pending' : 'mismatch',
+            photos: {
+              nameplate: nameplatePhoto ? [nameplatePhoto] : ['https://picsum.photos/id/3/750/500'],
+              appearance: appearancePhotos.length > 0
+                ? appearancePhotos
+                : ['https://picsum.photos/id/1/750/500', 'https://picsum.photos/id/26/750/500']
+            },
+            samplingIds: [],
+            inspectionIds: [],
+            installIds: [],
+            remarks: form.remarks
+          };
+
+          store.addArrival(newArrival);
+          Taro.showToast({ title: '✅ 登记成功', icon: 'success' });
+          setTimeout(() => Taro.navigateBack(), 1200);
         }
       }
     });

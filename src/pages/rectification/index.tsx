@@ -1,74 +1,70 @@
 import React, { useMemo, useState } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro, { useRouter } from '@tarojs/taro';
+import Taro from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
+import { useTraceStore } from '@/store/traceStore';
 import { currentProjectId } from '@/data/projects';
-import {
-  getRectificationsByProject,
-  rectificationStatusMap,
-  sourceTypeMap,
-  getPendingRectifications
-} from '@/data/rectification';
-import SearchBar from '@/components/SearchBar';
 import StatusTag from '@/components/StatusTag';
 import EmptyState from '@/components/EmptyState';
 
-const STATUS_FILTERS = [
-  { label: '全部', value: '' },
-  { label: '待处理', value: 'pending' },
-  { label: '整改中', value: 'processing' },
-  { label: '待确认', value: 'confirming' },
-  { label: '已通过', value: 'approved' },
-  { label: '已驳回', value: 'rejected' },
+const FILTERS = [
+  { key: 'all', label: '全部' },
+  { key: 'pending', label: '待处理' },
+  { key: 'processing', label: '整改中' },
+  { key: 'confirming', label: '待确认' },
+  { key: 'approved', label: '已通过' },
+  { key: 'rejected', label: '已驳回' }
 ];
 
-const dotColors: Record<string, string> = {
-  pending: '#F53F3F',
-  processing: '#FF7D00',
-  confirming: '#1E6FFF',
-  approved: '#00B42A',
-  rejected: '#86909C'
+const STEP_ICONS: Record<string, string> = {
+  '发起整改': '🆕', '指派整改': '📋', '开始整改': '🔨',
+  '提交整改': '📝', '监理确认通过': '✅', '监理驳回，需重新整改': '❌'
 };
 
 export default function RectificationPage() {
-  const router = useRouter();
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const store = useTraceStore();
+  const [filter, setFilter] = useState('all');
 
-  const allRects = useMemo(() => getRectificationsByProject(currentProjectId), []);
-  const pending = useMemo(() => getPendingRectifications(), []);
+  const allRects = useMemo(() => store.getRectificationsByProject(currentProjectId), [store]);
 
-  const summary = useMemo(() => ({
+  const stats = useMemo(() => ({
     total: allRects.length,
     pending: allRects.filter(r => r.status === 'pending').length,
     processing: allRects.filter(r => r.status === 'processing').length,
-    confirming: allRects.filter(r => r.status === 'confirming').length,
+    confirming: allRects.filter(r => r.status === 'confirming').length
   }), [allRects]);
 
+  const urgentConfirm = useMemo(
+    () => allRects.find(r => r.status === 'confirming' && r.priority === 'high'),
+    [allRects]
+  );
+
   const list = useMemo(() => {
-    return allRects.filter(r => {
-      if (statusFilter && r.status !== statusFilter) return false;
-      if (search) {
-        const kw = search.toLowerCase();
-        return (
-          r.rectNo.toLowerCase().includes(kw) ||
-          r.title.toLowerCase().includes(kw) ||
-          r.sourceNo?.toLowerCase().includes(kw)
-        );
-      }
-      return true;
-    });
-  }, [allRects, search, statusFilter]);
+    if (filter === 'all') return allRects;
+    return allRects.filter(r => r.status === filter);
+  }, [allRects, filter]);
+
+  const handleStart = (id: string) => {
+    store.updateRectificationStatus(id, 'processing');
+    Taro.showToast({ title: '已开始整改', icon: 'success' });
+  };
+
+  const handleSubmit = (id: string) => {
+    store.updateRectificationStatus(id, 'confirming');
+    Taro.showToast({ title: '已提交监理确认', icon: 'success' });
+  };
 
   const handleApprove = (id: string) => {
     Taro.showModal({
-      title: '监理确认通过',
-      content: '确认该整改已完成并通过验收？',
+      title: '⚠️ 监理确认通过',
+      content: '确认该整改已经现场复核合格？此操作将闭环完成整改流程，不可撤销。',
+      confirmText: '确认通过',
       confirmColor: '#00B42A',
-      success: res => {
-        if (res.confirm) {
-          Taro.showToast({ title: '已通过', icon: 'success' });
+      success: r => {
+        if (r.confirm) {
+          store.approveRectification(id, '王建国（监理总监）');
+          Taro.showToast({ title: '整改已通过', icon: 'success' });
         }
       }
     });
@@ -76,81 +72,80 @@ export default function RectificationPage() {
 
   const handleReject = (id: string) => {
     Taro.showModal({
-      title: '驳回整改',
-      content: '确认该整改未达标需要重新处理？',
+      title: '❌ 监理驳回',
+      content: '确认该整改不符合要求？请要求施工单位重新整改后再提交。',
+      confirmText: '确认驳回',
       confirmColor: '#F53F3F',
-      success: res => {
-        if (res.confirm) {
-          Taro.showToast({ title: '已驳回', icon: 'none' });
+      success: r => {
+        if (r.confirm) {
+          store.rejectRectification(id, '王建国（监理总监）');
+          Taro.showToast({ title: '已驳回重新整改', icon: 'none' });
         }
       }
     });
+  };
+
+  const getStatusMeta = (s: string) => {
+    const map: Record<string, { text: string; type: any }> = {
+      pending: { text: '待处理', type: 'warning' },
+      processing: { text: '整改中', type: 'info' },
+      confirming: { text: '待确认', type: 'pending' },
+      approved: { text: '已通过', type: 'success' },
+      rejected: { text: '已驳回', type: 'error' }
+    };
+    return map[s] || { text: s, type: 'info' };
   };
 
   return (
     <View className='pageContainer'>
       <View className='pageHeader'>
         <Text className='pageTitle'>整改管理</Text>
-        <Text className='pageSubtitle'>发起整改 · 监理确认 · 闭环跟踪</Text>
+        <Text className='pageSubtitle'>发起整改 · 监理确认 · 闭环完成</Text>
       </View>
 
-      <SearchBar
-        placeholder='搜索整改编号/标题/关联单号'
-        value={search}
-        onChange={setSearch}
-      />
-
-      {pending.length > 0 && (
-        <View style={{
-          background: 'linear-gradient(135deg, #FFF3E0, #FFE4B8)',
-          borderRadius: 16,
-          padding: '20px 24px',
-          marginBottom: 16,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between'
-        }}
-          onClick={() => setStatusFilter('confirming')}
-        >
-          <View>
-            <Text style={{ fontSize: 26, fontWeight: 600, color: '#AD4E00' }}>
-              ⚠️ 有 {summary.confirming} 项整改待监理确认
-            </Text>
-            <Text style={{ fontSize: 22, color: '#AD4E00', opacity: 0.8, marginTop: 4, display: 'block' }}>
-              请及时审核整改结果
-            </Text>
+      {urgentConfirm && (
+        <View className={styles.urgentBar} onClick={() => setFilter('confirming')}>
+          <View className={styles.urgentLeft}>
+            <Text className={styles.urgentIcon}>🔥</Text>
+            <View className={styles.urgentText}>
+              <Text className={styles.urgentTitle}>紧急待确认：{urgentConfirm.title}</Text>
+              <Text className={styles.urgentDesc}>整改单号 {urgentConfirm.rectNo} · 请尽快监理复核</Text>
+            </View>
           </View>
-          <Text style={{ fontSize: 24, color: '#AD4E00', fontWeight: 500 }}>去处理 →</Text>
+          <Text className={styles.urgentArrow}>→</Text>
         </View>
       )}
 
-      <View className={styles.summaryBar}>
-        <View className={styles.summaryItem}>
-          <Text className={styles.statNum} style={{ color: '#1E6FFF' }}>{summary.total}</Text>
+      <View className={styles.statBar}>
+        <View className={styles.statItem}>
+          <Text className={styles.statNum} style={{ color: '#1E6FFF' }}>{stats.total}</Text>
           <Text className={styles.statLbl}>总整改</Text>
         </View>
-        <View className={styles.summaryItem}>
-          <Text className={styles.statNum} style={{ color: '#F53F3F' }}>{summary.pending}</Text>
+        <View className={styles.statItem}>
+          <Text className={styles.statNum} style={{ color: '#F53F3F' }}>{stats.pending}</Text>
           <Text className={styles.statLbl}>待处理</Text>
         </View>
-        <View className={styles.summaryItem}>
-          <Text className={styles.statNum} style={{ color: '#FF7D00' }}>{summary.processing}</Text>
+        <View className={styles.statItem}>
+          <Text className={styles.statNum} style={{ color: '#FF7D00' }}>{stats.processing}</Text>
           <Text className={styles.statLbl}>整改中</Text>
         </View>
-        <View className={styles.summaryItem}>
-          <Text className={styles.statNum} style={{ color: '#722ED1' }}>{summary.confirming}</Text>
+        <View className={styles.statItem}>
+          <Text className={styles.statNum} style={{ color: '#722ED1' }}>{stats.confirming}</Text>
           <Text className={styles.statLbl}>待确认</Text>
         </View>
       </View>
 
-      <View className={styles.statusTabs}>
-        {STATUS_FILTERS.map(f => (
+      <View className={styles.filterTabs}>
+        {FILTERS.map(f => (
           <View
-            key={f.value}
-            className={classnames(styles.tabItem, statusFilter === f.value && styles.tabActive)}
-            onClick={() => setStatusFilter(f.value)}
+            key={f.key}
+            className={classnames(styles.tabItem, filter === f.key && styles.tabActive)}
+            onClick={() => setFilter(f.key)}
           >
             <Text>{f.label}</Text>
+            {(['pending', 'processing', 'confirming'].includes(f.key) && stats[f.key as any] > 0) && (
+              <View className={styles.tabBadge}><Text>{stats[f.key as any]}</Text></View>
+            )}
           </View>
         ))}
       </View>
@@ -159,117 +154,125 @@ export default function RectificationPage() {
         {list.length === 0 ? (
           <EmptyState
             title='暂无整改记录'
-            description='检测不合格或巡检发现问题可发起整改'
-            actionText='去检测管理'
-            onAction={() => Taro.navigateTo({ url: '/pages/inspection/index' })}
+            description='发现质量问题时可发起整改流程'
+            actionText='回到货验收'
+            onAction={() => Taro.switchTab({ url: '/pages/arrival/index' })}
           />
         ) : (
           list.map(r => {
-            const sm = rectificationStatusMap[r.status];
-            const isUrgent = r.priority === 'high';
-            const priClass = r.priority === 'high' ? styles.priorityHigh : r.priority === 'medium' ? styles.priorityMedium : styles.priorityLow;
+            const meta = getStatusMeta(r.status);
+            const priorityGradient = r.priority === 'high'
+              ? 'linear-gradient(180deg,#F53F3F 0%,#FF7D00 100%)'
+              : r.priority === 'medium'
+                ? 'linear-gradient(180deg,#FF7D00 0%,#FFB500 100%)'
+                : 'linear-gradient(180deg,#00B42A 0%,#52C41A 100%)';
             return (
               <View key={r.id} className={styles.rectCard}>
-                <View className={classnames(styles.priorityBar, priClass)} />
-
-                <View className={styles.cardHeader}>
-                  <View style={{ flex: 1, paddingLeft: 8 }}>
-                    <Text className={styles.rectNo}>
-                      整改单：{r.rectNo}
-                      {isUrgent && <Text style={{ color: '#F53F3F', marginLeft: 12 }}>🔴 紧急</Text>}
-                    </Text>
-                    <Text className={styles.rectTitle}>{r.title}</Text>
-                  </View>
-                  <StatusTag text={sm.label} type={sm.type} size='sm' />
-                </View>
-
-                <View className={styles.sourceSection}>
-                  <Text className={styles.sourceLabel}>来源：{sourceTypeMap[r.sourceType]}</Text>
-                  <Text className={styles.sourceContent}>{r.sourceNo || '—'}</Text>
-                </View>
-
-                <View className={styles.descText}>
-                  <Text>{r.description}</Text>
-                </View>
-
-                <View className={styles.metaGrid}>
-                  <View className={styles.metaItem}>
-                    <Text className={styles.metaLabel}>发起人：</Text>
-                    <Text className={styles.metaValue}>{r.initiator}</Text>
-                  </View>
-                  <View className={styles.metaItem}>
-                    <Text className={styles.metaLabel}>负责人：</Text>
-                    <Text className={styles.metaValue}>{r.responsible}</Text>
-                  </View>
-                  <View className={styles.metaItem}>
-                    <Text className={styles.metaLabel}>发起时间：</Text>
-                    <Text className={styles.metaValue}>{r.createDate}</Text>
-                  </View>
-                  <View className={styles.metaItem}>
-                    <Text className={styles.metaLabel}>截止日期：</Text>
-                    <Text className={styles.metaValue} style={{ color: r.deadline && r.status !== 'approved' ? '#F53F3F' : undefined }}>
-                      {r.deadline}
-                    </Text>
-                  </View>
-                </View>
-
-                <View className={styles.timeline}>
-                  <Text className={styles.timelineTitle}>📋 处理进度</Text>
-                  {r.timeline.map((t, idx) => (
-                    <View key={idx} className={styles.timelineItem}>
-                      <View
-                        className={styles.timelineDot}
-                        style={{ backgroundColor: dotColors[r.status] || '#1E6FFF' }}
-                      />
-                      {idx < r.timeline.length - 1 && <View className={styles.timelineLine} />}
-                      <View className={styles.timelineContent}>
-                        <View className={styles.timelineHeader}>
-                          <Text className={styles.timelineAction}>{t.action}</Text>
-                          <Text className={styles.timelineTime}>{t.time}</Text>
-                        </View>
-                        <Text className={styles.timelineOperator}>操作人：{t.operator}</Text>
-                        {t.remark && <Text className={styles.timelineRemark}>{t.remark}</Text>}
-                      </View>
+                <View className={styles.priorityBar} style={{ background: priorityGradient }} />
+                <View className={styles.cardBody}>
+                  <View className={styles.cardHeader}>
+                    <View className={styles.headerLeft}>
+                      <Text className={styles.rectNo}>
+                        {r.priority === 'high' ? '🔴' : r.priority === 'medium' ? '🟡' : '🟢'} {r.rectNo}
+                      </Text>
+                      <StatusTag text={meta.text} type={meta.type} size='sm' />
                     </View>
-                  ))}
-                </View>
-
-                <View className={styles.cardActions}>
-                  <View
-                    className={classnames(styles.actionBtn, styles.btnSecondary)}
-                    onClick={() => r.sourceBatchNo && Taro.navigateTo({ url: `/pages/batch-detail/index?batchNo=${r.sourceBatchNo}` })}
-                  >
-                    <Text>🔗 追溯来源</Text>
+                    <View className={styles.deadlineTag}>
+                      <Text>📅 {r.deadline}</Text>
+                    </View>
                   </View>
+
+                  <View className={styles.sourceSection}>
+                    <Text className={styles.sectionLabel}>来源：</Text>
+                    <Text className={styles.sourceValue}>
+                      {r.sourceType === 'inspection' ? '🔬 检测报告 ' : '👁️ 现场巡检 '}
+                      {r.sourceBatchNo ? `批号 ${r.sourceBatchNo}` : r.source}
+                    </Text>
+                  </View>
+
+                  <Text className={styles.rectTitle}>{r.title}</Text>
+                  <View className={styles.problemBox}>
+                    <Text className={styles.problemText}>❌ {r.description}</Text>
+                  </View>
+
+                  <View className={styles.metaGrid}>
+                    <View className={styles.metaCell}>
+                      <Text className={styles.metaKey}>负责人</Text>
+                      <Text className={styles.metaVal}>{r.responsible}</Text>
+                    </View>
+                    <View className={styles.metaCell}>
+                      <Text className={styles.metaKey}>涉及位置</Text>
+                      <Text className={styles.metaVal}>{r.location}</Text>
+                    </View>
+                    <View className={styles.metaCell}>
+                      <Text className={styles.metaKey}>创建人</Text>
+                      <Text className={styles.metaVal}>{r.createdBy}</Text>
+                    </View>
+                    <View className={styles.metaCell}>
+                      <Text className={styles.metaKey}>创建时间</Text>
+                      <Text className={styles.metaVal}>{r.createDate}</Text>
+                    </View>
+                  </View>
+
+                  <View className={styles.timelineSection}>
+                    <Text className={styles.timelineTitle}>处理进度</Text>
+                    <View className={styles.timelineList}>
+                      {r.timeline.map((t, i) => (
+                        <View key={i} className={styles.tlRow}>
+                          <View className={styles.tlLeft}>
+                            <View className={styles.tlDot}>
+                              <Text style={{ fontSize: 16 }}>{STEP_ICONS[t.action] || '📌'}</Text>
+                            </View>
+                            {i < r.timeline.length - 1 && <View className={styles.tlLine} />}
+                          </View>
+                          <View className={styles.tlContent}>
+                            <View className={styles.tlRowHead}>
+                              <Text className={styles.tlAction}>{t.action}</Text>
+                              <Text className={styles.tlTime}>{t.time}</Text>
+                            </View>
+                            <Text className={styles.tlOperator}>操作人：{t.operator}</Text>
+                            {t.remark && <Text className={styles.tlRemark}>📝 {t.remark}</Text>}
+                          </View>
+                        </View>
+                      ))}
+                    </View>
+                  </View>
+
                   {(r.status === 'pending' || r.status === 'rejected') && (
-                    <View className={classnames(styles.actionBtn, styles.btnPrimary)}>
-                      <Text>📝 开始整改</Text>
+                    <View className={styles.actionBar}>
+                      <View className={styles.actionBtn} style={{ background: 'linear-gradient(135deg,#FF7D00,#FF9A2E)' }}
+                        onClick={() => handleStart(r.id)}>
+                        <Text>🔨 开始整改</Text>
+                      </View>
                     </View>
                   )}
                   {r.status === 'processing' && (
-                    <View className={classnames(styles.actionBtn, styles.btnPrimary)}>
-                      <Text>✅ 提交整改</Text>
+                    <View className={styles.actionBar}>
+                      <View className={classnames(styles.actionBtn, styles.btnGhost)}
+                        onClick={() => Taro.showToast({ title: '整改照片上传中', icon: 'none' })}>
+                        <Text>📷 上传凭证</Text>
+                      </View>
+                      <View className={styles.actionBtn} style={{ background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)' }}
+                        onClick={() => handleSubmit(r.id)}>
+                        <Text>📝 提交整改</Text>
+                      </View>
                     </View>
                   )}
                   {r.status === 'confirming' && (
-                    <>
-                      <View
-                        className={classnames(styles.actionBtn, styles.btnReject)}
-                        onClick={() => handleReject(r.id)}
-                      >
+                    <View className={styles.actionBar}>
+                      <View className={classnames(styles.actionBtn, styles.btnDanger)}
+                        onClick={() => handleReject(r.id)}>
                         <Text>❌ 驳回</Text>
                       </View>
-                      <View
-                        className={classnames(styles.actionBtn, styles.btnApprove)}
-                        onClick={() => handleApprove(r.id)}
-                      >
-                        <Text>✓ 监理确认</Text>
+                      <View className={classnames(styles.actionBtn, styles.btnSuccess)}
+                        onClick={() => handleApprove(r.id)}>
+                        <Text>✅ 监理确认</Text>
                       </View>
-                    </>
+                    </View>
                   )}
                   {r.status === 'approved' && (
-                    <View className={classnames(styles.actionBtn, styles.btnSecondary)}>
-                      <Text>📄 查看详情</Text>
+                    <View className={styles.closedHint}>
+                      <Text>✅ 整改已通过监理复核，流程闭环完成</Text>
                     </View>
                   )}
                 </View>
@@ -279,8 +282,8 @@ export default function RectificationPage() {
         )}
       </View>
 
-      <View className='fabBtn' onClick={() => Taro.showToast({ title: '发起整改', icon: 'none' })}>
-        <Text style={{ fontSize: 28 }}>📋</Text>
+      <View className='fabBtn' onClick={() => Taro.showToast({ title: '发起整改功能', icon: 'none' })}>
+        <Text style={{ fontSize: 36 }}>+</Text>
       </View>
     </View>
   );

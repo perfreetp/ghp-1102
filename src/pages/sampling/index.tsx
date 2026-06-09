@@ -1,10 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text } from '@tarojs/components';
-import Taro from '@tarojs/taro';
+import Taro, { useDidShow } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
-import { getSamplingsByProject, samplingStatusMap } from '@/data/sampling';
+import { samplingStatusMap } from '@/data/sampling';
 import { currentProjectId } from '@/data/projects';
+import { useTraceStore } from '@/store/traceStore';
 import SearchBar from '@/components/SearchBar';
 import StatusTag from '@/components/StatusTag';
 import EmptyState from '@/components/EmptyState';
@@ -14,16 +15,24 @@ const statusFilters = [
   { label: '待送检', value: 'pending' },
   { label: '已送检', value: 'sent' },
   { label: '检测中', value: 'testing' },
-  { label: '已出报告', value: 'done' }
+  { label: '已出报告', value: 'done' },
+  { label: '取样中', value: 'sampling' }
 ];
 
 const timelineSteps = ['现场取样', '已封样', '送检测机构', '检测机构接收', '出具报告'];
 
 export default function SamplingPage() {
+  const store = useTraceStore();
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [, setTick] = useState(0);
 
-  const allSamplings = useMemo(() => getSamplingsByProject(currentProjectId), []);
+  useDidShow(() => setTick(t => t + 1));
+
+  const allSamplings = useMemo(() => {
+    const list = store.samplings.filter(s => s.projectId === currentProjectId);
+    return list;
+  }, [store.samplings]);
 
   const filteredList = useMemo(() => {
     return allSamplings.filter(s => {
@@ -34,7 +43,7 @@ export default function SamplingPage() {
           s.materialName.toLowerCase().includes(kw) ||
           s.batchNo.toLowerCase().includes(kw) ||
           s.samplingNo.toLowerCase().includes(kw) ||
-          s.witness.includes(searchText)
+          s.witnessName.includes(searchText)
         );
       }
       return true;
@@ -44,67 +53,54 @@ export default function SamplingPage() {
   const stats = useMemo(() => {
     return {
       total: allSamplings.length,
-      pending: allSamplings.filter(s => s.status === 'pending').length,
+      pending: allSamplings.filter(s => s.status === 'pending' || s.status === 'sampling').length,
       testing: allSamplings.filter(s => s.status === 'sent' || s.status === 'testing').length,
       done: allSamplings.filter(s => s.status === 'done').length
     };
   }, [allSamplings]);
 
-  const getStepStatus = (status: string, idx: number) => {
-    const stepMap: Record<string, number> = {
-      pending: 1,
-      sent: 3,
-      testing: 4,
-      done: 5
-    };
-    const cur = stepMap[status] || 1;
-    if (idx < cur) return 'done';
-    if (idx === cur - 1) return 'doing';
+  const getStepStatus = (status: string, idx: number, curStep: number) => {
+    const cur = curStep || (
+      status === 'pending' ? 1 :
+        status === 'sent' ? 3 :
+          status === 'testing' ? 4 :
+            status === 'done' ? 5 :
+              curStep || 2
+    );
+    if (idx + 1 <= cur) return idx + 1 < cur ? 'done' : 'active';
     return 'pending';
-  };
-
-  const getStepTime = (s: any, idx: number) => {
-    const times = ['', s.samplingTime, s.samplingTime, s.sendTime, s.receiveTime];
-    return times[idx] || '';
-  };
-
-  const handleCreate = () => {
-    Taro.navigateTo({ url: '/pages/sampling-create/index' });
-  };
-
-  const handleGoInspection = (samplingId: string) => {
-    Taro.navigateTo({ url: `/pages/inspection/index?samplingId=${samplingId}` });
   };
 
   return (
     <View className='pageContainer'>
       <View className='pageHeader'>
         <Text className='pageTitle'>取样送检</Text>
-        <Text className='pageSubtitle'>见证取样 · 跟踪送检 · 报告录入</Text>
+        <Text className='pageSubtitle'>见证取样 · 跟踪送检 · 录入检测</Text>
       </View>
 
       <SearchBar
-        placeholder='搜索材料/取样编号/见证人'
+        placeholder='搜索批号/取样号/见证'
         value={searchText}
         onChange={setSearchText}
+        showScan
       />
 
-      <View className={styles.statsRow}>
-        <View className={styles.statItem}>
+      <View className={styles.statBar}>
+        <View className={styles.statCard} style={{ borderColor: '#1E6FFF' }}>
           <Text className={styles.statNum} style={{ color: '#1E6FFF' }}>{stats.total}</Text>
-          <Text className={styles.statLabel}>总取样</Text>
+          <Text className={styles.statLbl}>总数</Text>
         </View>
-        <View className={styles.statItem}>
+        <View className={styles.statCard} style={{ borderColor: '#FF7D00' }}>
           <Text className={styles.statNum} style={{ color: '#FF7D00' }}>{stats.pending}</Text>
-          <Text className={styles.statLabel}>待送检</Text>
+          <Text className={styles.statLbl}>待送检</Text>
         </View>
-        <View className={styles.statItem}>
-          <Text className={styles.statNum} style={{ color: '#86909C' }}>{stats.testing}</Text>
-          <Text className={styles.statLabel}>检测中</Text>
+        <View className={styles.statCard} style={{ borderColor: '#722ED1' }}>
+          <Text className={styles.statNum} style={{ color: '#722ED1' }}>{stats.testing}</Text>
+          <Text className={styles.statLbl}>检测中</Text>
         </View>
-        <View className={styles.statItem}>
+        <View className={styles.statCard} style={{ borderColor: '#00B42A' }}>
           <Text className={styles.statNum} style={{ color: '#00B42A' }}>{stats.done}</Text>
-          <Text className={styles.statLabel}>已完成</Text>
+          <Text className={styles.statLbl}>已完成</Text>
         </View>
       </View>
 
@@ -112,7 +108,7 @@ export default function SamplingPage() {
         {statusFilters.map(f => (
           <View
             key={f.value}
-            className={classnames(styles.filterBtn, statusFilter === f.value && styles.filterBtnActive)}
+            className={classnames(styles.filterItem, statusFilter === f.value && styles.filterActive)}
             onClick={() => setStatusFilter(f.value)}
           >
             <Text>{f.label}</Text>
@@ -124,124 +120,92 @@ export default function SamplingPage() {
         {filteredList.length === 0 ? (
           <EmptyState
             title='暂无取样记录'
-            description='对已验收的材料生成见证取样任务'
-            actionText='新建取样'
-            onAction={handleCreate}
+            description='到货验收后可生成见证取样任务'
+            actionText='去新增取样'
+            onAction={() => Taro.navigateTo({ url: '/pages/sampling-create/index' })}
           />
         ) : (
           filteredList.map(s => {
-            const sm = samplingStatusMap[s.status];
-            const stepIdx = s.status === 'pending' ? 0 : s.status === 'sent' ? 2 : s.status === 'testing' ? 3 : 4;
+            const info = samplingStatusMap[s.status] || { text: s.status, type: 'info' };
             return (
-              <View key={s.id} className={styles.samplingCard}>
-                <View className={styles.cardTop}>
-                  <View>
-                    <Text className={styles.samplingNo}>取样编号：{s.samplingNo}</Text>
-                    <Text className={styles.samplingTitle}>{s.materialName}</Text>
-                    <Text style={{ fontSize: 22, color: '#86909C', marginTop: 4, display: 'block' }}>
-                      {s.spec}
-                    </Text>
+              <View key={s.id} className={styles.card}>
+                <View className={styles.cardHead}>
+                  <View className={styles.headLeft}>
+                    <View className={styles.qyIcon}><Text>🧪</Text></View>
+                    <View>
+                      <Text className={styles.qyNo}>{s.samplingNo}</Text>
+                      <Text className={styles.matName}>{s.materialName} · 批号{s.batchNo.slice(-8)}</Text>
+                    </View>
                   </View>
-                  <StatusTag text={sm.label} type={sm.type} size='sm' />
+                  <StatusTag text={info.text} type={info.type} size='sm' />
                 </View>
 
-                <View className={styles.batchInfo}>
-                  <Text className={styles.batchIcon}>🔗</Text>
-                  <Text className={styles.batchText}>
-                    关联批次：{s.batchNo} · 代表数量 {s.representQuantity}{s.materialName.includes('钢筋') ? '吨' : s.materialName.includes('水泥') ? '吨' : '㎡'}
-                  </Text>
-                </View>
-
-                <View className={styles.infoGroup}>
-                  <View className={styles.groupTitle}>
-                    <Text>📋</Text>
-                    <Text>取样信息</Text>
-                  </View>
-                  <View className={styles.infoRow}>
-                    <View className={styles.infoCol}>
-                      <Text className={styles.infoLabel}>取样员</Text>
-                      <Text className={styles.infoValue}>{s.sampler}</Text>
+                <View className={styles.cardBody}>
+                  <View className={styles.infoGrid}>
+                    <View className={styles.cell}>
+                      <Text className={styles.cellLbl}>取样规格</Text>
+                      <Text className={styles.cellVal}>{s.spec}</Text>
                     </View>
-                    <View className={styles.infoCol}>
-                      <Text className={styles.infoLabel}>取样地点</Text>
-                      <Text className={styles.infoValue}>{s.samplingLocation}</Text>
+                    <View className={styles.cell}>
+                      <Text className={styles.cellLbl}>数量</Text>
+                      <Text className={styles.cellVal}>{s.quantity}{s.unit}</Text>
                     </View>
-                  </View>
-                  <View className={styles.infoRow}>
-                    <View className={styles.infoCol}>
-                      <Text className={styles.infoLabel}>取样规格</Text>
-                      <Text className={styles.infoValue}>{s.samplingQuantity}</Text>
+                    <View className={styles.cell}>
+                      <Text className={styles.cellLbl}>取样日期</Text>
+                      <Text className={styles.cellVal}>{s.samplingDate}</Text>
                     </View>
-                    <View className={styles.infoCol}>
-                      <Text className={styles.infoLabel}>检测机构</Text>
-                      <Text className={styles.infoValue} style={{ fontSize: 20 }}>{s.lab.slice(0, 12)}...</Text>
+                    <View className={styles.cell}>
+                      <Text className={styles.cellLbl}>检测机构</Text>
+                      <Text className={styles.cellVal}>{(s.labName || '').slice(0, 10)}</Text>
                     </View>
                   </View>
                 </View>
 
-                <View className={styles.witnessBox}>
-                  <View className={styles.witnessAvatar}>
-                    <Text>{s.witness.charAt(0)}</Text>
-                  </View>
-                  <View className={styles.witnessInfo}>
-                    <Text className={styles.witnessName}>
-                      监理见证人：{s.witness}
-                      {s.witnessPhone && <Text style={{ fontSize: 20, color: '#86909C', fontWeight: 400, marginLeft: 12 }}>
-                        {s.witnessPhone}
-                      </Text>}
-                    </Text>
-                    <Text className={styles.witnessUnit}>{s.witnessUnit}</Text>
-                  </View>
-                </View>
-
-                <View className={styles.timelineBox}>
-                  {timelineSteps.map((step, idx) => {
-                    const ss = getStepStatus(s.status, idx);
-                    const t = getStepTime(s, idx);
-                    return (
-                      <View key={idx} className={styles.timelineItem}>
-                        <View className={classnames(
-                          styles.timelineDot,
-                          ss === 'done' && styles.timelineDone,
-                          ss === 'doing' && styles.timelineDoing
-                        )} />
-                        <View className={styles.timelineContent}>
-                          <Text className={styles.timelineText}>
-                            <Text className={
-                              ss === 'done' ? styles.statusDone :
-                              ss === 'doing' ? styles.statusDoing : styles.statusPending
-                            }>{step}</Text>
-                            {t && <Text className={styles.timelineTime}>· {t.slice(5)}</Text>}
-                          </Text>
+                <View className={styles.timelineWrap}>
+                  <Text className={styles.tlTitle}>📍 送检流程进度</Text>
+                  <View className={styles.tlBar}>
+                    {timelineSteps.map((step, i) => {
+                      const st = getStepStatus(s.status, i, s.currentStep);
+                      return (
+                        <View key={i} className={styles.tlStep}>
+                          <View className={classnames(
+                            styles.tlDot,
+                            st === 'done' && styles.dotDone,
+                            st === 'active' && styles.dotActive,
+                            st === 'pending' && styles.dotPending
+                          )}>
+                            <Text>{st === 'done' ? '✓' : i + 1}</Text>
+                          </View>
+                          <Text className={classnames(
+                            styles.tlLabel,
+                            st !== 'pending' && styles.tlLabelActive
+                          )}>{step}</Text>
+                          {i < timelineSteps.length - 1 && (
+                            <View className={classnames(
+                              styles.tlConnector,
+                              st === 'done' && styles.connDone
+                            )} />
+                          )}
                         </View>
-                      </View>
-                    );
-                  })}
-                  {s.expectedResultTime && (
-                    <View className={styles.timelineItem}>
-                      <View className={styles.timelineDot} />
-                      <View className={styles.timelineContent}>
-                        <Text className={styles.timelineText} style={{ color: '#FF7D00' }}>
-                          预计出具报告：{s.expectedResultTime}
-                        </Text>
-                      </View>
-                    </View>
-                  )}
+                      );
+                    })}
+                  </View>
                 </View>
 
-                <View className={styles.cardFooter}>
-                  {(s.status === 'done' || s.status === 'testing') && (
-                    <View className={`${styles.filterBtn} ${styles.filterBtnActive}`} style={{ flex: 1 }}
-                      onClick={() => handleGoInspection(s.id)}
-                    >
-                      <Text>查看检测报告</Text>
-                    </View>
-                  )}
-                  {s.status === 'pending' && (
-                    <View className={`${styles.filterBtn} ${styles.filterBtnActive}`} style={{ flex: 1 }}>
-                      <Text>📤 去送检</Text>
-                    </View>
-                  )}
+                <View className={styles.witnessRow}>
+                  <View className={styles.witAvatar}>
+                    <Text>{(s.witnessName || '监').slice(0, 1)}</Text>
+                  </View>
+                  <View className={styles.witInfo}>
+                    <Text className={styles.witName}>监理见证：{s.witnessName}</Text>
+                    <Text className={styles.witUnit}>{s.witnessUnit}</Text>
+                  </View>
+                  <View
+                    className={styles.traceBtn}
+                    onClick={() => Taro.navigateTo({ url: `/pages/batch-detail/index?batchNo=${s.batchNo}` })}
+                  >
+                    <Text>� 追溯批次</Text>
+                  </View>
                 </View>
               </View>
             );
@@ -249,8 +213,8 @@ export default function SamplingPage() {
         )}
       </View>
 
-      <View className='fabBtn' onClick={handleCreate}>
-        <Text style={{ fontWeight: 300 }}>+</Text>
+      <View className='fabBtn' onClick={() => Taro.navigateTo({ url: '/pages/sampling-create/index' })}>
+        <Text style={{ fontSize: 36 }}>+</Text>
       </View>
     </View>
   );

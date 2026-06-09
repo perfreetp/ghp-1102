@@ -1,24 +1,32 @@
-import React, { useMemo } from 'react';
-import { View, Text } from '@tarojs/components';
+import React, { useMemo, useState } from 'react';
+import { View, Text, ScrollView } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
-import { arrivals } from '@/data/arrivals';
-import { samplingList } from '@/data/sampling';
-import { inspections } from '@/data/inspection';
-import { installRecords } from '@/data/trace';
-import { rectifications } from '@/data/rectification';
+import { useTraceStore } from '@/store/traceStore';
 import StatusTag from '@/components/StatusTag';
 
 export default function BatchDetailPage() {
   const router = useRouter();
-  const batchNo = (router.params.batchNo as string) || arrivals[0].batchNo;
+  const paramBatch = (router.params.batchNo as string) || '';
 
-  const arrival = useMemo(() => arrivals.find(a => a.batchNo === batchNo) || arrivals[0], [batchNo]);
-  const relatedSamplings = useMemo(() => samplingList.filter(s => s.batchNo === batchNo), [batchNo]);
-  const relatedInspections = useMemo(() => inspections.filter(i => i.batchNo === batchNo), [batchNo]);
-  const relatedInstalls = useMemo(() => installRecords.filter(r => r.materials.some(m => m.batchNo === batchNo)), [batchNo]);
-  const relatedRects = useMemo(() => rectifications.filter(r => r.sourceBatchNo === batchNo), [batchNo]);
+  const store = useTraceStore();
+  const arrivals = store.arrivals;
+
+  const allBatchNos = useMemo(() => {
+    return [...new Set(arrivals.map(a => a.batchNo))];
+  }, [arrivals]);
+
+  const [searchInput, setSearchInput] = useState(paramBatch || arrivals[0]?.batchNo || '');
+  const [batchNo, setBatchNo] = useState(paramBatch || arrivals[0]?.batchNo || '');
+  const [showExport, setShowExport] = useState(false);
+  const [exportText, setExportText] = useState('');
+
+  const arrival = useMemo(() => arrivals.find(a => a.batchNo === batchNo), [arrivals, batchNo]);
+  const relatedSamplings = useMemo(() => store.getSamplingsByBatch(batchNo), [store, batchNo]);
+  const relatedInspections = useMemo(() => store.getInspectionsByBatch(batchNo), [store, batchNo]);
+  const relatedInstalls = useMemo(() => store.getInstallsByBatch(batchNo), [store, batchNo]);
+  const relatedRects = useMemo(() => store.getRectificationsByBatch(batchNo), [store, batchNo]);
 
   const hasUnqualified = relatedInspections.some(i => i.conclusion === 'unqualified');
   const hasInstall = relatedInstalls.length > 0;
@@ -29,8 +37,136 @@ export default function BatchDetailPage() {
     return s + (found ? found.quantity : 0);
   }, 0);
 
+  const handleSearch = () => {
+    const match = allBatchNos.find(b =>
+      b.toLowerCase().includes(searchInput.toLowerCase()) ||
+      searchInput.toLowerCase().includes(b.toLowerCase())
+    );
+    if (match) {
+      setBatchNo(match);
+      Taro.showToast({ title: '已找到批次', icon: 'success' });
+    } else {
+      Taro.showModal({
+        title: '未找到批次',
+        content: `批号「${searchInput}」暂无追溯记录，下方为示例数据`,
+        showCancel: false,
+        success: () => setBatchNo(allBatchNos[0] || '')
+      });
+    }
+  };
+
+  const handleSelectHistory = (b: string) => {
+    setBatchNo(b);
+    setSearchInput(b);
+  };
+
+  const handleExport = () => {
+    const text = store.exportBatchLedger(batchNo);
+    setExportText(text);
+    setShowExport(true);
+  };
+
+  const handleCopy = () => {
+    Taro.setClipboardData({
+      data: exportText,
+      success: () => Taro.showToast({ title: '台账已复制', icon: 'success' })
+    });
+  };
+
+  if (!arrival) {
+    return (
+      <View className='pageContainer'>
+        <View className={styles.formCard} style={{ padding: 24 }}>
+          <View style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+            <View className={styles.formInput} style={{ flex: 1 }}>
+              <input
+                value={searchInput}
+                onInput={e => setSearchInput(e.detail.value)}
+                placeholder='输入批号查询，如 HC20260610-001'
+                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 26 }}
+              />
+            </View>
+            <View
+              style={{
+                background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)',
+                color: '#fff',
+                padding: '0 24px',
+                height: 80,
+                borderRadius: 12,
+                display: 'flex',
+                alignItems: 'center',
+                fontWeight: 600,
+                fontSize: 26
+              }}
+              onClick={handleSearch}
+            >
+              <Text>🔍 查询</Text>
+            </View>
+          </View>
+          <Text style={{ fontSize: 24, color: '#86909C', textAlign: 'center', display: 'block', padding: '64rpx 0' }}>
+            暂无该批次追溯记录
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View className='pageContainer' style={{ paddingBottom: 180 }}>
+      <View className={styles.formCard} style={{
+        padding: 20,
+        marginBottom: 16,
+        borderRadius: 16
+      }}>
+        <View style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <View className={styles.formInput} style={{ flex: 1, height: 72 }}>
+            <input
+              value={searchInput}
+              onInput={e => setSearchInput(e.detail.value)}
+              onConfirm={handleSearch}
+              placeholder='输入批号查询，如 HC20260610-001'
+              style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', fontSize: 26 }}
+            />
+          </View>
+          <View
+            onClick={handleSearch}
+            style={{
+              background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)',
+              color: '#fff',
+              padding: '0 28rpx',
+              height: 72,
+              borderRadius: 12,
+              display: 'flex',
+              alignItems: 'center',
+              fontWeight: 600,
+              fontSize: 26,
+              flexShrink: 0
+            }}
+          >
+            <Text>🔍 查询</Text>
+          </View>
+        </View>
+        <View style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Text style={{ fontSize: 22, color: '#86909C', paddingTop: 4 }}>快速切换：</Text>
+          {allBatchNos.slice(0, 6).map(b => (
+            <Text
+              key={b}
+              onClick={() => handleSelectHistory(b)}
+              style={{
+                fontSize: 20,
+                padding: '6rpx 16rpx',
+                borderRadius: 20,
+                background: b === batchNo ? 'linear-gradient(135deg,#1E6FFF,#4D92FF)' : '#F2F3F5',
+                color: b === batchNo ? '#fff' : '#4E5969',
+                fontWeight: b === batchNo ? 500 : 400
+              }}
+            >
+              {b.slice(-8)}
+            </Text>
+          ))}
+        </View>
+      </View>
+
       <View className={styles.batchCard}>
         <Text className={styles.batchTag}>🔍 材料批次追溯</Text>
         <Text className={styles.batchNo}>{arrival.batchNo}</Text>
@@ -91,9 +227,7 @@ export default function BatchDetailPage() {
 
         <View className={styles.tlItem}>
           <View className={styles.tlLine} />
-          <View className={classnames(styles.tlDot, styles.dotDone)}>
-            <Text>1</Text>
-          </View>
+          <View className={classnames(styles.tlDot, styles.dotDone)}><Text>1</Text></View>
           <View className={styles.tlContent}>
             <View className={styles.tlHeader}>
               <Text className={styles.tlName}>📦 到货验收</Text>
@@ -312,24 +446,30 @@ export default function BatchDetailPage() {
                 <Text className={styles.tlTime}>{relatedRects[0]?.createDate}</Text>
               </View>
               <View className={styles.tlBody}>
-                {relatedRects.map(r => (
-                  <View key={r.id}>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>整改单号</Text>
-                      <Text className={styles.tlVal}>{r.rectNo}</Text>
+                {relatedRects.map(r => {
+                  const map: Record<string, string> = {
+                    pending: '待处理', processing: '整改中', confirming: '待确认',
+                    approved: '已通过', rejected: '已驳回'
+                  };
+                  return (
+                    <View key={r.id}>
+                      <View className={styles.tlRow}>
+                        <Text className={styles.tlKey}>整改单号</Text>
+                        <Text className={styles.tlVal}>{r.rectNo}</Text>
+                      </View>
+                      <View className={styles.tlRow}>
+                        <Text className={styles.tlKey}>整改状态</Text>
+                        <Text className={styles.tlVal}>
+                          {r.status === 'approved' ? '✅ 已完成' : '⏳ ' + map[r.status]}
+                        </Text>
+                      </View>
+                      <View className={styles.tlRow}>
+                        <Text className={styles.tlKey}>问题描述</Text>
+                        <Text className={styles.tlVal}>{r.title}</Text>
+                      </View>
                     </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>整改状态</Text>
-                      <Text className={styles.tlVal}>
-                        {r.status === 'approved' ? '✅ 已完成' : '⏳ ' + r.status}
-                      </Text>
-                    </View>
-                    <View className={styles.tlRow}>
-                      <Text className={styles.tlKey}>问题描述</Text>
-                      <Text className={styles.tlVal}>{r.title}</Text>
-                    </View>
-                  </View>
-                ))}
+                  );
+                })}
                 <View className={styles.tlActions}>
                   <View
                     className={classnames(styles.tlBtn, styles.tlBtnPrimary)}
@@ -347,16 +487,13 @@ export default function BatchDetailPage() {
       <View className={styles.section}>
         <View className={styles.sectionHead}>
           <Text className={styles.sectionName}>📍 使用范围分布（共{relatedInstalls.length}处）</Text>
-          <Text style={{ fontSize: 22, color: '#86909C' }}>展开 ›</Text>
         </View>
         {hasInstall ? (
-          relatedInstalls.slice(0, 3).map(r => {
+          relatedInstalls.map(r => {
             const mat = r.materials.find(m => m.batchNo === batchNo);
             return (
               <View key={r.id} className={styles.usageItem}>
-                <View className={styles.usageIcon}>
-                  <Text>🏢</Text>
-                </View>
+                <View className={styles.usageIcon}><Text>🏢</Text></View>
                 <View className={styles.usageInfo}>
                   <Text className={styles.usageLoc}>{r.building} {r.floor} · {r.area}</Text>
                   <Text className={styles.usageComp}>构件：{r.componentName}（{r.componentCode}）</Text>
@@ -377,19 +514,97 @@ export default function BatchDetailPage() {
       </View>
 
       <View className={styles.bottomFloat}>
-        <View
-          className={classnames(styles.floatBtn, styles.btnExport)}
-          onClick={() => Taro.showToast({ title: '正在导出追溯台账...', icon: 'loading' })}
-        >
+        <View className={classnames(styles.floatBtn, styles.btnExport)} onClick={handleExport}>
           <Text>📄 导出台账</Text>
         </View>
         <View
           className={classnames(styles.floatBtn, styles.btnShare)}
           onClick={() => Taro.showToast({ title: '生成追溯码成功', icon: 'success' })}
         >
-          <Text>🔗 生成追溯码</Text>
+          <Text>� 生成追溯码</Text>
         </View>
       </View>
+
+      {showExport && (
+        <View style={{
+          position: 'fixed', left: 0, right: 0, top: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.5)', zIndex: 999,
+          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 32
+        }} onClick={() => setShowExport(false)}>
+          <View
+            style={{
+              width: '100%',
+              maxHeight: '80vh',
+              background: '#fff',
+              borderRadius: 16,
+              overflow: 'hidden'
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <View style={{
+              padding: '24rpx 28rpx',
+              borderBottom: '1rpx solid #F2F3F5',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <Text style={{ fontSize: 28, fontWeight: 700, color: '#1D2129' }}>
+                📄 追溯台账预览
+              </Text>
+              <Text
+                onClick={handleCopy}
+                style={{
+                  fontSize: 24, color: '#1E6FFF', fontWeight: 500,
+                  padding: '8rpx 20rpx',
+                  background: 'rgba(30,111,255,0.08)',
+                  borderRadius: 20
+                }}
+              >
+                📋 复制全部
+              </Text>
+            </View>
+            <ScrollView scrollY style={{ maxHeight: '55vh', padding: 24 }}>
+              <Text selectable style={{
+                fontSize: 20,
+                lineHeight: 1.8,
+                color: '#1D2129',
+                fontFamily: 'Consolas, monospace',
+                whiteSpace: 'pre-wrap'
+              }}>
+                {exportText}
+              </Text>
+            </ScrollView>
+            <View style={{
+              padding: 24,
+              borderTop: '1rpx solid #F2F3F5',
+              display: 'flex', gap: 16
+            }}>
+              <View
+                onClick={() => setShowExport(false)}
+                style={{
+                  flex: 1, height: 76, borderRadius: 12,
+                  background: '#F2F3F5', color: '#4E5969',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 26, fontWeight: 600
+                }}
+              >
+                <Text>关闭</Text>
+              </View>
+              <View
+                onClick={handleCopy}
+                style={{
+                  flex: 1.2, height: 76, borderRadius: 12,
+                  background: 'linear-gradient(135deg,#1E6FFF,#4D92FF)', color: '#fff',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 26, fontWeight: 600
+                }}
+              >
+                <Text>复制台账内容</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

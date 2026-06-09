@@ -3,7 +3,9 @@ import { View, Text, Input } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
-import { arrivals } from '@/data/arrivals';
+import { useTraceStore } from '@/store/traceStore';
+import { currentProjectId } from '@/data/projects';
+import { Sampling } from '@/types';
 
 const SAMPLING_POINTS = [
   { id: 'top', label: '上部', icon: '↑' },
@@ -20,29 +22,36 @@ const LAB_LIST = [
   { name: '中建八局检测技术中心', address: '浦东新区高科西路888号' },
 ];
 
+const pad = (n: number) => String(n).padStart(2, '0');
+const nowStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 export default function SamplingCreatePage() {
+  const store = useTraceStore();
   const router = useRouter();
-  const arrivalId = (router.params.arrivalId as string) || arrivals[0].id;
+  const paramArrivalId = (router.params.arrivalId as string) || '';
+  const projectArrivals = store.getArrivalsByProject(currentProjectId);
 
-  const selectedArrival = useMemo(() => {
-    return arrivals.find(a => a.id === arrivalId) || arrivals[0];
-  }, [arrivalId]);
+  const [arrivalId, setArrivalId] = useState(paramArrivalId || projectArrivals[0]?.id || '');
+  const selectedArrival = useMemo(
+    () => projectArrivals.find(a => a.id === arrivalId) || projectArrivals[0],
+    [projectArrivals, arrivalId]
+  );
 
-  const today = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }, []);
-
-  const samplingNo = useMemo(() => {
-    return `QY${today.replace(/-/g, '')}${String(Math.floor(Math.random() * 9000) + 1000)}`;
-  }, [today]);
+  const today = nowStr();
+  const samplingNo = useMemo(
+    () => `QY${today.replace(/-/g, '')}${String(Math.floor(Math.random() * 9000) + 1000)}`,
+    [today]
+  );
 
   const [form, setForm] = useState({
     spec: selectedArrival?.spec || '',
-    quantity: '',
+    quantity: String(Math.round((selectedArrival?.quantity || 0) * 0.02) || 1),
     unit: selectedArrival?.unit || '吨',
     samplingDate: today,
-    witnessName: '周建国',
+    witnessName: selectedArrival?.witness || '王建国',
     witnessUnit: '上海建科监理有限公司',
     witnessPhone: '13800138000',
     samplingPoints: ['mid', 'center'] as string[],
@@ -61,16 +70,20 @@ export default function SamplingCreatePage() {
   };
 
   const handleChangeArrival = () => {
-    const items = arrivals.slice(0, 5).map(a => `${a.id} · ${a.materialName.slice(0, 12)}`);
+    const list = projectArrivals.slice(0, 8);
+    const items = list.map(a => `${a.batchNo.slice(-8)} · ${a.materialName}`);
     Taro.showActionSheet({
       itemList: items,
       success: res => {
-        const arr = arrivals[res.tapIndex];
+        const arr = list[res.tapIndex];
         if (arr) {
+          setArrivalId(arr.id);
           setForm({
             ...form,
             spec: arr.spec,
-            unit: arr.unit
+            unit: arr.unit,
+            witnessName: arr.witness || form.witnessName,
+            quantity: String(Math.round(arr.quantity * 0.02) || 1)
           });
         }
       }
@@ -80,13 +93,15 @@ export default function SamplingCreatePage() {
   const handleSelectLab = () => {
     Taro.showActionSheet({
       itemList: LAB_LIST.map(l => l.name),
-      success: res => {
-        setForm({ ...form, labIndex: res.tapIndex });
-      }
+      success: res => setForm({ ...form, labIndex: res.tapIndex })
     });
   };
 
   const handleSubmit = () => {
+    if (!selectedArrival) {
+      Taro.showToast({ title: '请选择关联到货单', icon: 'none' });
+      return;
+    }
     if (!form.spec) {
       Taro.showToast({ title: '请填写取样规格', icon: 'none' });
       return;
@@ -98,16 +113,48 @@ export default function SamplingCreatePage() {
 
     Taro.showModal({
       title: '确认提交',
-      content: `见证取样编号：${samplingNo}\n见证人：${form.witnessName}`,
+      content: `见证取样编号：${samplingNo}\n见证人：${form.witnessName}\n关联批号：${selectedArrival.batchNo}`,
       confirmColor: '#1E6FFF',
       success: res => {
         if (res.confirm) {
-          Taro.showLoading({ title: '生成中...' });
-          setTimeout(() => {
-            Taro.hideLoading();
-            Taro.showToast({ title: '取样任务已创建', icon: 'success' });
-            setTimeout(() => Taro.switchTab({ url: '/pages/sampling/index' }), 1500);
-          }, 1200);
+          const id = 'S' + Date.now().toString().slice(-10);
+          const newSampling: Sampling = {
+            id,
+            projectId: currentProjectId,
+            arrivalId: selectedArrival.id,
+            batchNo: selectedArrival.batchNo,
+            samplingNo,
+            materialName: selectedArrival.materialName,
+            materialType: selectedArrival.materialType,
+            spec: form.spec,
+            quantity: parseFloat(form.quantity) || 0,
+            unit: form.unit,
+            samplingDate: form.samplingDate,
+            samplingPoints: form.samplingPoints,
+            sampler: form.sampler,
+            witnessName: form.witnessName,
+            witnessUnit: form.witnessUnit,
+            witnessPhone: form.witnessPhone,
+            labName: LAB_LIST[form.labIndex].name,
+            labAddress: LAB_LIST[form.labIndex].address,
+            sealNo: form.sealNo,
+            sendDate: form.samplingDate,
+            receiveDate: '',
+            reportDate: '',
+            reportNo: '',
+            currentStep: 2,
+            status: 'sampling',
+            remarks: form.remarks,
+            photos: {
+              sealed: ['https://picsum.photos/id/60/750/500'],
+              process: ['https://picsum.photos/id/20/750/500']
+            }
+          };
+
+          store.addSampling(newSampling);
+          store.addSamplingToArrival(selectedArrival.id, id);
+          Taro.showToast({ title: '✅ 取样任务已创建', icon: 'success' });
+          setTimeout(() => Taro.switchTab({ url: '/pages/sampling/index' }), 1500);
         }
       }
     });
@@ -125,10 +172,16 @@ export default function SamplingCreatePage() {
         <View className={styles.selectedCard}>
           <View className={styles.selectedBadge} />
           <View className={styles.selectedContent}>
-            <Text className={styles.selNo}>{selectedArrival?.id} · 批号 {selectedArrival?.batchNo}</Text>
+            <Text className={styles.selNo}>
+              {selectedArrival?.id} · 批号 {selectedArrival?.batchNo}
+            </Text>
             <Text className={styles.selName}>{selectedArrival?.materialName}</Text>
-            <Text className={styles.selSpec}>{selectedArrival?.spec} · 供应商：{selectedArrival?.supplier?.slice(0, 12)}...</Text>
-            <Text className={styles.selQty}>到货数量：{selectedArrival?.quantity}{selectedArrival?.unit}</Text>
+            <Text className={styles.selSpec}>
+              {selectedArrival?.spec} · 供应商：{(selectedArrival?.supplier || '').slice(0, 12)}
+            </Text>
+            <Text className={styles.selQty}>
+              到货数量：{selectedArrival?.quantity}{selectedArrival?.unit}
+            </Text>
           </View>
         </View>
       </View>
