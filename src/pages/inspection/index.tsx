@@ -3,19 +3,20 @@ import { View, Text } from '@tarojs/components';
 import Taro, { useRouter } from '@tarojs/taro';
 import styles from './index.module.scss';
 import classnames from 'classnames';
-import { currentProjectId } from '@/data/projects';
-import { getInspectionsByProject, inspectionConclusionMap, getUnqualifiedInspections } from '@/data/inspection';
+import { inspectionConclusionMap } from '@/data/inspection';
+import { useTraceStore } from '@/store/traceStore';
 import StatusTag from '@/components/StatusTag';
 import SearchBar from '@/components/SearchBar';
 import EmptyState from '@/components/EmptyState';
 
 export default function InspectionPage() {
   const router = useRouter();
+  const store = useTraceStore();
   const [search, setSearch] = useState('');
   const [conclusionFilter, setConclusionFilter] = useState<string>('');
+  const allInspections = store.inspections;
 
-  const allInspections = useMemo(() => getInspectionsByProject(currentProjectId), []);
-  const unqualified = useMemo(() => getUnqualifiedInspections(), []);
+  const unqualified = useMemo(() => allInspections.filter(i => i.conclusion !== 'qualified'), [allInspections]);
 
   const summary = useMemo(() => ({
     total: allInspections.length,

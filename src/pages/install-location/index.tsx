@@ -9,8 +9,8 @@ import SearchBar from '@/components/SearchBar';
 import StatusTag from '@/components/StatusTag';
 import EmptyState from '@/components/EmptyState';
 
-const BUILDINGS = ['1号楼', '2号楼', '3号楼', '5号楼', '6号楼'];
-const FLOORS = ['全部', 'B1', '1F', '2F', '3F', '4F', '5F', '6F', '7F', '8F'];
+const BUILDINGS = ['全部', '1号楼', '2号楼', '3号楼', '5号楼', '6号楼', '地下车库'];
+const FLOORS = ['全部', 'B2层', 'B1层', '1F', '2F', '3F', '4F', '5F', '6F', '7F', '8F', '9F', '10F', '1-3层', '1-10层', '3-6层', '7-9层'];
 
 export default function InstallLocationPage() {
   const store = useTraceStore();
@@ -81,7 +81,7 @@ export default function InstallLocationPage() {
       </View>
 
       <View className={styles.filterTabs}>
-        {['全部', ...BUILDINGS].map(b => (
+        {BUILDINGS.map(b => (
           <View
             key={b}
             className={classnames(styles.tabItem, buildingFilter === b && styles.tabActive)}

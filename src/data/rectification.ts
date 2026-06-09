@@ -3,128 +3,243 @@ import { Rectification } from '@/types';
 export const rectifications: Rectification[] = [
   {
     id: 'R001',
+    rectNo: 'ZG20260610-001',
     projectId: 'P001',
     sourceType: 'inspection',
-    sourceId: 'I003',
-    sourceNo: '2026-DQ-0606-015',
-    title: '电缆导体直流电阻不合格整改',
-    description: '2026年6月8日检测报告显示，批次DT20260606-017的YJV-4×95+1×50电缆导体直流电阻实测0.198Ω/km，超过标准值0.193Ω/km，不符合GB/T 12706.1-2020要求。该批次电缆已敷设320米至地下车库主供电干线，需立即处理。',
-    rectPhotos: ['https://picsum.photos/id/1025/750/500'],
-    initiator: '质量总监·陈总监',
-    initiateTime: '2026-06-09 09:00',
+    sourceBatchNo: 'GJH20260609-007',
+    source: '检测报告BG20260612-0166',
+    title: '钢筋屈服强度不合格',
+    description: 'Φ20mm HRB400钢筋检测报告显示屈服强度实测值415MPa，低于HRB400E要求的≥400MPa标准且屈强比超限，同时抗震要求不满足。已按规范要求清退出场处理，严禁在工程中使用该批次材料。',
+    priority: 'high',
+    status: 'confirming',
+    responsible: '王磊（材料员）',
+    location: '3号楼12层钢筋堆放场',
     deadline: '2026-06-12 18:00',
-    handler: '电气分包·杨经理',
-    handlerPhone: '13655556666',
-    handlerTeam: '上海输变电工程公司电气班组',
-    status: 'reviewing',
-    measures: '1. 立即停止该批次电缆的继续使用；\n2. 对已敷设的320米电缆进行加倍取样送第三方检测；\n3. 如复验仍不合格，全部拆除更换；\n4. 供应商承担所有返工费用；\n5. 同步加强后续电缆进场验收的电阻抽测。',
-    resultDescription: '已从同批次电缆中加倍抽取2组40米试样，于6月10日送上海市电气设备质量检验中心复验。同时对已敷设段全部标识隔离，暂停通电。待复验结果出来后决定后续处理。',
-    resultPhotos: ['https://picsum.photos/id/119/750/500', 'https://picsum.photos/id/160/750/500'],
-    finishTime: '2026-06-11 16:30',
-    reviewer: '监理·孙工',
-    reviewTime: '',
-    reviewComment: ''
+    createdBy: '王建国（监理）',
+    createDate: '2026-06-10 10:30',
+    timeline: [
+      {
+        action: '发起整改',
+        operator: '王建国（监理总监）',
+        time: '2026-06-10 10:30',
+        remark: '检测报告不合格，立即启动整改'
+      },
+      {
+        action: '指派整改',
+        operator: '项目经理-张总',
+        time: '2026-06-10 11:00',
+        remark: '指派材料员王磊负责清退处理，同步联系供应商换货'
+      },
+      {
+        action: '开始整改',
+        operator: '王磊（材料员）',
+        time: '2026-06-10 14:20',
+        remark: '已联系供应商江阴长达钢铁，约定6月11日运走不合格批次并补发HRB400E合格钢筋'
+      },
+      {
+        action: '提交整改',
+        operator: '王磊（材料员）',
+        time: '2026-06-11 16:40',
+        remark: '28.5吨不合格钢筋已清退出场（离场照片已附），同规格HRB400E合格钢筋已补发到位（新批号HC20260611-015）'
+      }
+    ]
   },
   {
     id: 'R002',
+    rectNo: 'ZG20260609-002',
     projectId: 'P001',
     sourceType: 'arrival',
-    sourceId: 'A20260608011',
-    sourceNo: 'A20260608011',
-    title: '铝合金型材壁厚不合格退货处理',
-    description: '2026年6月8日到货验收时，批次GJ20260608-003的6063-T5铝合金型材实测壁厚1.2mm，不符合合同要求的1.4mm。供应商已签字确认。',
-    rectPhotos: ['https://picsum.photos/id/6/750/500'],
-    initiator: '材料员·王磊',
-    initiateTime: '2026-06-08 16:00',
-    deadline: '2026-06-10 12:00',
-    handler: '供应部·黄经理',
-    handlerPhone: '13855443322',
-    handlerTeam: '广东凤铝铝业有限公司',
+    sourceBatchNo: 'HC20260610-001',
+    source: '到货验收-A20260610001',
+    title: '钢筋外观局部锈蚀',
+    description: 'Φ25mm×9m HRB400E钢筋在第3、4捆发现局部轻微浮锈（面积约3-5%），集中于捆扎接触处。需进行除锈处理后方可使用，监理现场确认除锈质量。',
+    priority: 'medium',
     status: 'approved',
-    measures: '1. 立即办理退货手续，整车退回供应商；\n2. 供应商重新生产符合规格的产品后再送货；\n3. 纳入供应商月度考核；\n4. 后续型材进场100%壁厚检测。',
-    resultDescription: '6月9日下午，不合格铝合金型材整车已运离现场，退货手续办理完毕。供应部已与供应商沟通，6月12日前重新交付符合壁厚要求的产品。已将本次事件纳入供应商考核。',
-    resultPhotos: ['https://picsum.photos/id/11/750/500'],
-    finishTime: '2026-06-09 18:00',
-    reviewer: '总监·周总',
-    reviewTime: '2026-06-10 09:30',
-    reviewComment: '处理及时，符合合同要求。后续加强进厂材料的关键指标复核，避免类似事件影响工期。'
+    responsible: '上海建工钢筋班组',
+    location: '2号楼堆场东侧',
+    deadline: '2026-06-11 12:00',
+    createdBy: '李明远（监理）',
+    createDate: '2026-06-10 09:00',
+    timeline: [
+      {
+        action: '发起整改',
+        operator: '李明远（土建监理）',
+        time: '2026-06-10 09:00',
+        remark: '到货验收时发现外观浮锈'
+      },
+      {
+        action: '指派整改',
+        operator: '施工主管-李工',
+        time: '2026-06-10 09:30',
+        remark: '钢筋班组负责人工钢丝刷除锈'
+      },
+      {
+        action: '开始整改',
+        operator: '钢筋班组王组长',
+        time: '2026-06-10 14:00',
+        remark: '安排3名工人除锈，预计4小时完成'
+      },
+      {
+        action: '提交整改',
+        operator: '钢筋班组王组长',
+        time: '2026-06-10 18:20',
+        remark: '除锈完成，共清理4捆钢筋，除锈后外光光洁，已附除锈前后对比照片'
+      },
+      {
+        action: '监理确认通过',
+        operator: '李明远（土建监理）',
+        time: '2026-06-11 09:15',
+        remark: '现场复核除锈质量，锈蚀已完全清除，允许正常使用'
+      }
+    ]
   },
   {
     id: 'R003',
-    projectId: 'P003',
+    rectNo: 'ZG20260608-003',
+    projectId: 'P001',
     sourceType: 'install',
-    sourceId: 'INST005',
-    sourceNo: 'INST005',
-    title: '电缆竖井敷设不规范整改',
-    description: '监理巡检发现，1号楼配电竖井内楼层供电干线敷设存在：1. 电缆固定间距超过规范要求1.5m；2. 部分转弯处弯曲半径不足；3. 标识牌缺失。',
-    rectPhotos: ['https://picsum.photos/id/160/750/500'],
-    initiator: '监理·孙工',
-    initiateTime: '2026-06-11 10:30',
-    deadline: '2026-06-13 17:00',
-    handler: '电气班长·杨班长',
-    handlerPhone: '13655556666',
-    handlerTeam: '上海输变电工程公司电气班组',
-    status: 'processing',
-    measures: '1. 按每1.2m间距增加电缆固定卡；\n2. 转弯处重新敷设保证15D弯曲半径；\n3. 补充每段回路标识牌。',
-    resultDescription: '',
-    resultPhotos: [],
-    finishTime: '',
-    reviewer: '',
-    reviewTime: '',
-    reviewComment: ''
+    sourceBatchNo: 'HT20260609-015',
+    source: '3号楼4层-安装验收',
+    title: '加气块砌筑灰缝厚度不均',
+    description: '3号楼4层东侧墙体抽查10个灰缝点，发现3处厚度超过规范要求的15mm（实测18-22mm），2处低于8mm。需按交底要求重新调整灰缝厚度，确保满足GB 50203规范要求。',
+    priority: 'medium',
+    status: 'confirming',
+    responsible: '安徽中天砌筑班组',
+    location: '3号楼4F 401-403室填充墙',
+    deadline: '2026-06-12 12:00',
+    createdBy: '李明远（监理）',
+    createDate: '2026-06-11 15:20',
+    timeline: [
+      {
+        action: '发起整改',
+        operator: '李明远（土建监理）',
+        time: '2026-06-11 15:20',
+        remark: '砌体工程隐蔽验收时发现灰缝偏差'
+      },
+      {
+        action: '指派整改',
+        operator: '砌筑主管-王工',
+        time: '2026-06-11 16:00',
+        remark: '对不符合要求部位进行返工，重新挂线砌筑'
+      },
+      {
+        action: '开始整改',
+        operator: '安徽中天李队长',
+        time: '2026-06-12 08:30',
+        remark: '安排4名工人对问题部位返工，拆除问题砌体重新组砌'
+      },
+      {
+        action: '提交整改',
+        operator: '安徽中天李队长',
+        time: '2026-06-12 11:50',
+        remark: '返工完成，灰缝厚度重新抽查8个点均在10-12mm范围内，已附整改后尺量照片'
+      }
+    ]
   },
   {
     id: 'R004',
+    rectNo: 'ZG20260607-004',
+    projectId: 'P001',
+    sourceType: 'patrol',
+    sourceBatchNo: 'KP20260604-012',
+    source: '日常巡检-2号楼5层',
+    title: '页岩砖未提前浇水湿润',
+    description: '2号楼5层页岩砖砌筑当日气温32℃，检查发现砌筑前未按要求提前浇水湿润（含水率要求10-15%），砖表面干燥。已要求立即停工整改，浇水湿润后方可继续施工。',
+    priority: 'low',
+    status: 'processing',
+    responsible: '安徽中天砌筑班组',
+    location: '2号楼5层作业面',
+    deadline: '2026-06-13 17:00',
+    createdBy: '王建国（监理）',
+    createDate: '2026-06-12 09:30',
+    timeline: [
+      {
+        action: '发起整改',
+        operator: '王建国（监理总监）',
+        time: '2026-06-12 09:30',
+        remark: '高温天气施工，砖未湿润易产生砂浆失水影响强度'
+      },
+      {
+        action: '指派整改',
+        operator: '砌筑主管-王工',
+        time: '2026-06-12 10:00',
+        remark: '立即暂停作业，下午14:00后重新浇水湿润（提前2小时）'
+      },
+      {
+        action: '开始整改',
+        operator: '安徽中天李队长',
+        time: '2026-06-12 12:00',
+        remark: '已洒水车全面浇水，砖块已覆盖养护膜待下午使用'
+      }
+    ]
+  },
+  {
+    id: 'R005',
+    rectNo: 'ZG20260606-005',
     projectId: 'P001',
     sourceType: 'inspection',
-    sourceId: 'I003',
-    sourceNo: '2026-DQ-0606-015',
-    title: '不合格电缆退场复验',
-    description: 'R001整改继续推进：如加倍复验仍不合格，已敷设地下车库段必须全部拆除退场，重新采购合格产品。',
-    rectPhotos: ['https://picsum.photos/id/201/750/500'],
-    initiator: '质量总监·陈总监',
-    initiateTime: '2026-06-11 14:00',
-    deadline: '2026-06-15 18:00',
-    handler: '项目总工·李工',
-    handlerPhone: '13912345678',
-    handlerTeam: '项目部技术组',
-    status: 'pending',
-    measures: '1. 6月13日前拿到复验报告；\n2. 如不合格启动拆除方案审批；\n3. 新供应商样品提前送检。',
-    resultDescription: '',
-    resultPhotos: [],
-    finishTime: '',
-    reviewer: '',
-    reviewTime: '',
-    reviewComment: ''
+    sourceBatchNo: 'KP20260604-012',
+    source: '检测报告BG20260608-0062',
+    title: '页岩砖单块最小抗压强度接近临界值',
+    description: '多孔页岩砖MU15检测结果显示，10块试样中2块强度实测值15.1MPa，仅略高于标准要求15.0MPa，离散性较大。需对后续砌筑部位重点监控砂浆饱满度，建议进行加倍取样复验。',
+    priority: 'low',
+    status: 'approved',
+    responsible: '试验员-小周',
+    location: '工地试验室',
+    deadline: '2026-06-10 18:00',
+    createdBy: '李明远（监理）',
+    createDate: '2026-06-08 14:00',
+    timeline: [
+      {
+        action: '发起整改',
+        operator: '李明远（土建监理）',
+        time: '2026-06-08 14:00',
+        remark: '建议复验确认'
+      },
+      {
+        action: '指派整改',
+        operator: '技术部-赵工',
+        time: '2026-06-08 15:00',
+        remark: '安排试验员加倍取样20块进行复验'
+      },
+      {
+        action: '开始整改',
+        operator: '试验员-小周',
+        time: '2026-06-09 09:00',
+        remark: '已现场加倍取样，已送检同济检测站'
+      },
+      {
+        action: '提交整改',
+        operator: '试验员-小周',
+        time: '2026-06-10 16:30',
+        remark: '复验报告（BG20260610-0122）显示20块平均强度16.8MPa，最小值15.7MPa，均满足MU15要求'
+      },
+      {
+        action: '监理确认通过',
+        operator: '李明远（土建监理）',
+        time: '2026-06-10 17:45',
+        remark: '复验合格，同意继续使用'
+      }
+    ]
   }
 ];
 
-export const getRectificationsByProject = (projectId: string): Rectification[] => {
-  return rectifications.filter(r => r.projectId === projectId);
+export const getRectificationsByProject = (pid: string): Rectification[] =>
+  rectifications.filter(r => r.projectId === pid);
+
+export const getRectificationsByBatch = (batch: string): Rectification[] =>
+  rectifications.filter(r => r.sourceBatchNo && r.sourceBatchNo.includes(batch));
+
+export const rectPriorityMap = {
+  high: { text: '高', color: '#F53F3F' },
+  medium: { text: '中', color: '#FF7D00' },
+  low: { text: '低', color: '#00B42A' }
 };
 
-export const getRectificationById = (id: string): Rectification | undefined => {
-  return rectifications.find(r => r.id === id);
-};
-
-export const getRectificationsBySource = (sourceType: Rectification['sourceType'], sourceId: string): Rectification[] => {
-  return rectifications.filter(r => r.sourceType === sourceType && r.sourceId === sourceId);
-};
-
-export const getPendingRectifications = (): Rectification[] => {
-  return rectifications.filter(r => ['pending', 'processing', 'reviewing'].includes(r.status));
-};
-
-export const rectificationStatusMap: Record<Rectification['status'], { label: string; type: 'success' | 'warning' | 'error' | 'info' | 'pending' }> = {
+export const rectStatusMap: Record<string, { label: string; type: 'success' | 'warning' | 'error' | 'info' | 'pending' | 'trace' }> = {
   pending: { label: '待处理', type: 'warning' },
   processing: { label: '整改中', type: 'info' },
-  reviewing: { label: '待确认', type: 'warning' },
+  confirming: { label: '待确认', type: 'pending' },
   approved: { label: '已通过', type: 'success' },
   rejected: { label: '已驳回', type: 'error' }
-};
-
-export const sourceTypeMap: Record<Rectification['sourceType'], { label: string }> = {
-  inspection: { label: '检测不合格' },
-  arrival: { label: '到货问题' },
-  install: { label: '安装问题' }
 };
