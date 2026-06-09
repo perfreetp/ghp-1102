@@ -1,0 +1,189 @@
+@use '@/styles/variables.scss' as *;
+
+.summaryBar {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.summaryItem {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  text-align: center;
+  box-shadow: $shadow-card;
+}
+
+.num {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.lbl {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.reportCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  &:active { transform: scale(0.99); }
+}
+
+.reportTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.reportNo {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+}
+
+.reportTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-top: 6rpx;
+  line-height: 1.3;
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.metaCell {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  .metaLabel {
+    color: $color-text-tertiary;
+    margin-right: 6rpx;
+  }
+}
+
+.conclusionBar {
+  padding: $spacing-md;
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.conclusionQualified {
+  background-color: $color-success-bg;
+}
+
+.conclusionUnqualified {
+  background-color: $color-error-bg;
+}
+
+.conclusionIcon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+.iconOk {
+  background-color: $color-success;
+  color: white;
+}
+
+.iconBad {
+  background-color: $color-error;
+  color: white;
+}
+
+.conclusionContent {
+  flex: 1;
+  .conclusionText {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+  }
+  .conclusionRemarks {
+    font-size: $font-size-xs;
+    margin-top: 4rpx;
+    line-height: 1.5;
+  }
+}
+
+.textOk { color: $color-success; }
+.textBad { color: $color-error; }
+
+.itemsTable {
+  background-color: $color-bg-section;
+  border-radius: $radius-sm;
+  overflow: hidden;
+}
+
+.tableHead, .tableRow {
+  display: grid;
+  grid-template-columns: 3fr 2fr 2fr 1.2fr;
+  padding: $spacing-sm $spacing-md;
+  font-size: $font-size-xs;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.tableHead {
+  background-color: rgba($color-primary, 0.08);
+  color: $color-primary;
+  font-weight: $font-weight-semibold;
+}
+
+.tableRow {
+  border-top: 1rpx solid $color-divider;
+  color: $color-text-secondary;
+}
+
+.rowOk {
+  .cellResult { color: $color-success; font-weight: 600; }
+}
+
+.rowBad {
+  background-color: $color-error-bg;
+  .cellResult { color: $color-error; font-weight: 600; }
+}
+
+.footerActions {
+  display: flex;
+  gap: $spacing-sm;
+  padding-top: $spacing-md;
+  margin-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+}
+
+.actionItem {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-sm;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  &:active { opacity: 0.9; transform: scale(0.98); }
+}
+
+.actPrimary {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: white;
+}
+.actWarn { background-color: $color-warning-bg; color: $color-warning; }
+.actError { background-color: $color-error-bg; color: $color-error; }
+.actInfo { background-color: $color-trace-bg; color: $color-trace; }

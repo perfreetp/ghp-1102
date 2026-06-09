@@ -1,0 +1,394 @@
+@use '@/styles/variables.scss' as *;
+
+.batchCard {
+  background: linear-gradient(135deg, #0F2F6B 0%, $color-primary 50%, $color-primary-light 100%);
+  border-radius: $radius-xl;
+  padding: $spacing-xl;
+  margin-bottom: $spacing-lg;
+  position: relative;
+  overflow: hidden;
+}
+
+.batchCard::before {
+  content: '';
+  position: absolute;
+  right: -60rpx;
+  top: -60rpx;
+  width: 240rpx;
+  height: 240rpx;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 50%;
+}
+
+.batchCard::after {
+  content: '';
+  position: absolute;
+  right: 40rpx;
+  bottom: -80rpx;
+  width: 180rpx;
+  height: 180rpx;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 50%;
+}
+
+.batchTag {
+  display: inline-block;
+  background: rgba(255, 255, 255, 0.2);
+  padding: 6rpx 20rpx;
+  border-radius: $radius-round;
+  font-size: 20rpx;
+  color: #fff;
+  letter-spacing: 2rpx;
+}
+
+.batchNo {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  color: #fff;
+  margin-top: 16rpx;
+  letter-spacing: 1rpx;
+}
+
+.batchMatName {
+  font-size: $font-size-lg;
+  color: rgba(255, 255, 255, 0.9);
+  margin-top: 8rpx;
+  font-weight: $font-weight-semibold;
+}
+
+.batchStats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-md;
+  margin-top: $spacing-lg;
+  padding-top: $spacing-lg;
+  border-top: 1rpx solid rgba(255, 255, 255, 0.15);
+}
+
+.statCol {
+  text-align: center;
+  .statVal {
+    font-size: 44rpx;
+    font-weight: $font-weight-bold;
+    color: #fff;
+    line-height: 1;
+  }
+  .statLbl {
+    font-size: 20rpx;
+    color: rgba(255, 255, 255, 0.7);
+    margin-top: 10rpx;
+  }
+}
+
+.statusBanner {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+  padding: $spacing-md $spacing-lg;
+  border-radius: $radius-lg;
+  margin-bottom: $spacing-lg;
+}
+
+.bannerOk {
+  background: linear-gradient(135deg, $color-success-bg, #E8FFEE);
+  border: 1rpx solid rgba($color-success, 0.2);
+}
+
+.bannerWarn {
+  background: linear-gradient(135deg, $color-warning-bg, #FFF7E6);
+  border: 1rpx solid rgba($color-warning, 0.2);
+}
+
+.bannerErr {
+  background: linear-gradient(135deg, $color-error-bg, #FFECE8);
+  border: 1rpx solid rgba($color-error, 0.2);
+}
+
+.bannerIcon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+.iconOk { background: $color-success; color: #fff; }
+.iconWarn { background: $color-warning; color: #fff; }
+.iconErr { background: $color-error; color: #fff; }
+
+.bannerText {
+  flex: 1;
+  .bannerTitle {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+  .bannerDesc {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    margin-top: 4rpx;
+    line-height: 1.5;
+  }
+}
+
+.timelineWrap {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-xl $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.timelineTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-xl;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.tlItem {
+  display: flex;
+  gap: $spacing-md;
+  padding-bottom: $spacing-xl;
+  position: relative;
+  &:last-child {
+    padding-bottom: 0;
+    .tlLine { display: none; }
+  }
+}
+
+.tlLine {
+  position: absolute;
+  left: 27rpx;
+  top: 64rpx;
+  bottom: 0;
+  width: 2rpx;
+  background: linear-gradient(180deg, $color-trace 0%, $color-divider 100%);
+}
+
+.tlDot {
+  width: 56rpx;
+  height: 56rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 4rpx 12rpx rgba(0, 0, 0, 0.12);
+}
+
+.dotActive {
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+}
+
+.dotDone {
+  background: $color-success;
+  color: #fff;
+}
+
+.dotPending {
+  background: #fff;
+  border: 2rpx solid $color-divider;
+  color: $color-text-tertiary;
+}
+
+.tlContent {
+  flex: 1;
+  padding-top: 4rpx;
+}
+
+.tlHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-sm;
+}
+
+.tlName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+}
+
+.tlTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.tlBody {
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+}
+
+.tlRow {
+  display: flex;
+  padding: 6rpx 0;
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.6;
+  .tlKey {
+    color: $color-text-tertiary;
+    width: 140rpx;
+    flex-shrink: 0;
+  }
+  .tlVal {
+    color: $color-text-primary;
+    font-weight: $font-weight-medium;
+    flex: 1;
+  }
+}
+
+.tlActions {
+  display: flex;
+  gap: $spacing-sm;
+  margin-top: $spacing-md;
+  padding-top: $spacing-md;
+  border-top: 1rpx dashed $color-divider;
+}
+
+.tlBtn {
+  @include button-reset;
+  flex: 1;
+  height: 60rpx;
+  border-radius: $radius-sm;
+  font-size: $font-size-xs;
+  font-weight: $font-weight-medium;
+  &:active { opacity: 0.9; }
+}
+
+.tlBtnPrimary {
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+}
+
+.tlBtnGhost {
+  background: #fff;
+  border: 1rpx solid $color-divider;
+  color: $color-text-secondary;
+}
+
+.section {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.sectionHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.sectionName {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.usageItem {
+  display: flex;
+  align-items: flex-start;
+  gap: $spacing-md;
+  padding: $spacing-md;
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  margin-bottom: $spacing-sm;
+  &:last-child { margin-bottom: 0; }
+}
+
+.usageIcon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-md;
+  background: linear-gradient(135deg, $color-trace-bg, rgba($color-trace, 0.15));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+.usageInfo {
+  flex: 1;
+  .usageLoc {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+  .usageComp {
+    font-size: $font-size-xs;
+    color: $color-text-secondary;
+    margin-top: 6rpx;
+  }
+  .usageTeam {
+    font-size: $font-size-xs;
+    color: $color-trace;
+    margin-top: 6rpx;
+  }
+}
+
+.usageQty {
+  text-align: right;
+  .qtyNum {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-primary;
+  }
+  .qtyUnit {
+    font-size: 20rpx;
+    color: $color-text-tertiary;
+    margin-top: 2rpx;
+  }
+}
+
+.bottomFloat {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc($spacing-lg + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  display: flex;
+  gap: $spacing-sm;
+  box-shadow: 0 -4rpx 24rpx rgba(0, 0, 0, 0.06);
+  z-index: 99;
+}
+
+.floatBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-md;
+  border-radius: $radius-button;
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  &:active { opacity: 0.9; }
+}
+
+.btnExport {
+  background: $color-bg-section;
+  color: $color-text-secondary;
+}
+
+.btnShare {
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+}

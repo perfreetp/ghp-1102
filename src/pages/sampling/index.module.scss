@@ -1,0 +1,259 @@
+@use '@/styles/variables.scss' as *;
+
+.statsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.statItem {
+  background-color: $color-bg-card;
+  border-radius: $radius-md;
+  padding: $spacing-md $spacing-sm;
+  text-align: center;
+  box-shadow: $shadow-card;
+}
+
+.statNum {
+  font-size: $font-size-xl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.statLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+}
+
+.filterBar {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  margin-bottom: $spacing-md;
+}
+
+.filterBtn {
+  @include button-reset;
+  padding: 0 $spacing-md;
+  height: $button-height-sm;
+  border-radius: $radius-button;
+  font-size: $font-size-sm;
+  background-color: $color-bg-card;
+  color: $color-text-secondary;
+  box-shadow: $shadow-card;
+  white-space: nowrap;
+  &:active {
+    opacity: 0.9;
+  }
+}
+
+.filterBtnActive {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-light 100%);
+  color: $color-text-white;
+  font-weight: $font-weight-medium;
+}
+
+.samplingCard {
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+  transition: all $transition-base;
+  &:active {
+    transform: scale(0.99);
+  }
+}
+
+.cardTop {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: $spacing-md;
+}
+
+.samplingNo {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-primary;
+  line-height: 1.3;
+}
+
+.samplingTitle {
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-top: 6rpx;
+  line-height: 1.4;
+}
+
+.batchInfo {
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+  padding: $spacing-sm $spacing-md;
+  background-color: $color-warning-bg;
+  border-radius: $radius-sm;
+  margin-bottom: $spacing-md;
+}
+
+.batchIcon {
+  font-size: $font-size-md;
+}
+
+.batchText {
+  font-size: $font-size-xs;
+  color: $color-warning;
+  font-weight: $font-weight-medium;
+}
+
+.infoGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $spacing-sm;
+  margin-bottom: $spacing-md;
+}
+
+.groupTitle {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  font-weight: $font-weight-medium;
+  display: flex;
+  align-items: center;
+  gap: 6rpx;
+  margin-bottom: 4rpx;
+}
+
+.infoRow {
+  display: flex;
+  align-items: center;
+  gap: $spacing-sm;
+}
+
+.infoCol {
+  flex: 1;
+  min-width: 0;
+}
+
+.infoLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.infoValue {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+  @include text-ellipsis;
+}
+
+.witnessBox {
+  background-color: $color-primary-bg;
+  border-radius: $radius-sm;
+  padding: $spacing-sm $spacing-md;
+  margin-bottom: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.witnessAvatar {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: $radius-round;
+  background-color: $color-primary;
+  color: $color-text-white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-semibold;
+  flex-shrink: 0;
+}
+
+.witnessInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.witnessName {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  line-height: 1.3;
+}
+
+.witnessUnit {
+  font-size: $font-size-xs;
+  color: $color-primary;
+  @include text-ellipsis;
+  margin-top: 4rpx;
+}
+
+.timelineBox {
+  padding: $spacing-sm 0 0;
+  border-top: 1rpx solid $color-divider;
+}
+
+.timelineItem {
+  display: flex;
+  gap: $spacing-sm;
+  padding: $spacing-xs 0;
+}
+
+.timelineDot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: $radius-round;
+  background-color: $color-border;
+  margin-top: 10rpx;
+  flex-shrink: 0;
+}
+
+.timelineDone {
+  background-color: $color-success;
+}
+
+.timelineDoing {
+  background-color: $color-primary;
+}
+
+.timelineContent {
+  flex: 1;
+}
+
+.timelineText {
+  font-size: $font-size-xs;
+  color: $color-text-secondary;
+  line-height: 1.5;
+}
+
+.timelineTime {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-left: $spacing-sm;
+}
+
+.statusDone {
+  color: $color-success;
+  font-weight: $font-weight-medium;
+}
+
+.statusDoing {
+  color: $color-primary;
+  font-weight: $font-weight-medium;
+}
+
+.statusPending {
+  color: $color-text-tertiary;
+}
+
+.cardFooter {
+  display: flex;
+  gap: $spacing-sm;
+  padding-top: $spacing-md;
+  border-top: 1rpx solid $color-divider;
+  margin-top: $spacing-sm;
+}

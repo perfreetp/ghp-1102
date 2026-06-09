@@ -1,0 +1,298 @@
+@use '@/styles/variables.scss' as *;
+
+.stepBar {
+  display: flex;
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-md;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.stepItem {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  position: relative;
+}
+
+.stepDot {
+  width: 52rpx;
+  height: 52rpx;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: $font-weight-bold;
+  margin-bottom: 8rpx;
+}
+
+.dotActive {
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+  box-shadow: 0 4rpx 12rpx rgba($color-primary, 0.3);
+}
+
+.dotDone {
+  background: $color-success;
+  color: #fff;
+}
+
+.dotPending {
+  background: $color-bg-section;
+  color: $color-text-tertiary;
+}
+
+.stepLabel {
+  font-size: 20rpx;
+  color: $color-text-secondary;
+}
+
+.labelActive { color: $color-primary; font-weight: 600; }
+.labelDone { color: $color-success; font-weight: 500; }
+
+.formCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.cardTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.formItem {
+  margin-bottom: $spacing-lg;
+  &:last-child { margin-bottom: 0; }
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.required {
+  color: $color-error;
+  margin-left: 4rpx;
+}
+
+.formInput {
+  height: $button-height-md;
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: 0 $spacing-md;
+  display: flex;
+  align-items: center;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  position: relative;
+}
+
+.inputText {
+  flex: 1;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+}
+
+.placeholder {
+  color: $color-text-tertiary;
+}
+
+.inputSuffix {
+  color: $color-text-tertiary;
+  font-size: $font-size-xs;
+  margin-left: $spacing-sm;
+}
+
+.scanBtn {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+  padding: 10rpx 20rpx;
+  border-radius: $radius-round;
+  font-size: 22rpx;
+  font-weight: 500;
+  margin-left: $spacing-sm;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
+}
+
+.photoSection {
+  margin-top: $spacing-md;
+}
+
+.photoLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+}
+
+.photoTip {
+  font-size: 20rpx;
+  color: $color-text-tertiary;
+}
+
+.photoGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: $spacing-sm;
+}
+
+.photoItem {
+  aspect-ratio: 1;
+  border-radius: $radius-md;
+  overflow: hidden;
+  position: relative;
+  background: $color-bg-section;
+  border: 2rpx dashed $color-divider;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.photoUploaded {
+  border: none;
+  .photoImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
+.photoAdd {
+  flex-direction: column;
+  color: $color-text-tertiary;
+  gap: 8rpx;
+  .plus {
+    font-size: 52rpx;
+    line-height: 1;
+  }
+  .text {
+    font-size: 20rpx;
+  }
+}
+
+.photoDelete {
+  position: absolute;
+  top: -8rpx;
+  right: -8rpx;
+  width: 36rpx;
+  height: 36rpx;
+  background: $color-error;
+  color: #fff;
+  border-radius: $radius-round;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+}
+
+.specCompare {
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.specTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-md;
+}
+
+.specRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: $spacing-sm;
+  align-items: center;
+  padding: $spacing-sm 0;
+  border-bottom: 1rpx dashed $color-divider;
+  &:last-child { border-bottom: none; }
+}
+
+.specLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+}
+
+.specValue {
+  font-size: $font-size-xs;
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.specIcon {
+  font-size: 28rpx;
+}
+
+.submitBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc($spacing-lg + env(safe-area-inset-bottom));
+  display: flex;
+  gap: $spacing-sm;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  z-index: 99;
+}
+
+.submitBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  &:active { opacity: 0.9; }
+}
+
+.btnSave {
+  background: $color-bg-section;
+  color: $color-text-secondary;
+  flex: 0.8;
+}
+
+.btnSubmit {
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+}
+
+.btnFull { flex: 1; }
+
+.formTextarea {
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  min-height: 160rpx;
+  line-height: 1.6;
+}

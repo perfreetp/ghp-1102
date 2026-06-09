@@ -1,0 +1,56 @@
+@use '@/styles/variables.scss' as *;
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: $font-weight-medium;
+  border-radius: $radius-sm;
+  white-space: nowrap;
+}
+
+.text {
+  font-size: inherit;
+  line-height: 1;
+}
+
+.sizeSm {
+  padding: 6rpx 12rpx;
+  font-size: $font-size-xs;
+  border-radius: $radius-xs;
+}
+
+.sizeMd {
+  padding: 10rpx 20rpx;
+  font-size: $font-size-sm;
+}
+
+.typeSuccess {
+  background-color: $color-success-bg;
+  color: $color-success;
+}
+
+.typeWarning {
+  background-color: $color-warning-bg;
+  color: $color-warning;
+}
+
+.typeError {
+  background-color: $color-error-bg;
+  color: $color-error;
+}
+
+.typeInfo {
+  background-color: $color-info-bg;
+  color: $color-info;
+}
+
+.typePending {
+  background-color: $color-pending-bg;
+  color: $color-pending;
+}
+
+.typeTrace {
+  background-color: $color-trace-bg;
+  color: $color-trace;
+}

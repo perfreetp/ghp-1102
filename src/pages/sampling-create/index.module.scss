@@ -1,0 +1,352 @@
+@use '@/styles/variables.scss' as *;
+
+.arrivalSelector {
+  background: linear-gradient(135deg, rgba($color-primary, 0.08), rgba($color-primary-light, 0.04));
+  border: 2rpx solid rgba($color-primary, 0.15);
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+}
+
+.selectorTitle {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.changeBtn {
+  font-size: 22rpx;
+  color: $color-primary;
+  font-weight: 500;
+}
+
+.selectedCard {
+  background: #fff;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  display: flex;
+  gap: $spacing-sm;
+}
+
+.selectedBadge {
+  width: 8rpx;
+  border-radius: 4rpx;
+  background: linear-gradient(180deg, $color-primary, $color-primary-light);
+  flex-shrink: 0;
+}
+
+.selectedContent {
+  flex: 1;
+  .selNo {
+    font-size: 22rpx;
+    color: $color-primary;
+    font-weight: 500;
+  }
+  .selName {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+    margin-top: 6rpx;
+  }
+  .selSpec {
+    font-size: 22rpx;
+    color: $color-text-secondary;
+    margin-top: 6rpx;
+  }
+  .selQty {
+    font-size: 24rpx;
+    color: $color-success;
+    font-weight: 600;
+    margin-top: 6rpx;
+  }
+}
+
+.formCard {
+  background: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  margin-bottom: $spacing-md;
+  box-shadow: $shadow-card;
+}
+
+.cardTitle {
+  font-size: $font-size-md;
+  font-weight: $font-weight-semibold;
+  color: $color-text-primary;
+  margin-bottom: $spacing-lg;
+  display: flex;
+  align-items: center;
+  gap: $spacing-xs;
+}
+
+.formItem {
+  margin-bottom: $spacing-lg;
+  &:last-child { margin-bottom: 0; }
+}
+
+.formLabel {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  margin-bottom: $spacing-sm;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.required {
+  color: $color-error;
+  margin-left: 4rpx;
+}
+
+.formInput {
+  height: $button-height-md;
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: 0 $spacing-md;
+  display: flex;
+  align-items: center;
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+}
+
+.inputText {
+  flex: 1;
+  color: $color-text-primary;
+  font-size: $font-size-sm;
+}
+
+.placeholder {
+  color: $color-text-tertiary;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: $spacing-md;
+}
+
+.witnessCard {
+  background: linear-gradient(135deg, #F5F0FF, #FAF7FF);
+  border: 2rpx solid rgba(114, 46, 209, 0.15);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+  margin-top: $spacing-sm;
+}
+
+.witnessAvatar {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: $radius-round;
+  background: linear-gradient(135deg, #722ED1, #9F6BFF);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  flex-shrink: 0;
+}
+
+.witnessInfo {
+  flex: 1;
+  .wName {
+    font-size: $font-size-md;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+  .wUnit {
+    font-size: 22rpx;
+    color: $color-text-secondary;
+    margin-top: 6rpx;
+  }
+  .wPhone {
+    font-size: 22rpx;
+    color: $color-primary;
+    margin-top: 4rpx;
+  }
+}
+
+.witnessChange {
+  font-size: 22rpx;
+  color: #722ED1;
+  font-weight: 500;
+  padding: 8rpx 20rpx;
+  background: rgba(114, 46, 209, 0.1);
+  border-radius: $radius-round;
+}
+
+.labCard {
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  display: flex;
+  align-items: center;
+  gap: $spacing-md;
+}
+
+.labIcon {
+  width: 80rpx;
+  height: 80rpx;
+  border-radius: $radius-md;
+  background: linear-gradient(135deg, rgba($color-primary, 0.15), rgba($color-primary-light, 0.1));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 36rpx;
+  flex-shrink: 0;
+}
+
+.labInfo {
+  flex: 1;
+  .lName {
+    font-size: $font-size-sm;
+    font-weight: $font-weight-semibold;
+    color: $color-text-primary;
+  }
+  .lAddr {
+    font-size: 20rpx;
+    color: $color-text-tertiary;
+    margin-top: 6rpx;
+    line-height: 1.4;
+  }
+}
+
+.sectionTag {
+  background: linear-gradient(135deg, $color-warning-bg, rgba($color-warning, 0.1));
+  border: 2rpx solid rgba($color-warning, 0.2);
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-top: $spacing-md;
+}
+
+.tagTitle {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-semibold;
+  color: $color-warning;
+  margin-bottom: $spacing-sm;
+}
+
+.tagContent {
+  font-size: 22rpx;
+  color: #AD4E00;
+  line-height: 1.7;
+}
+
+.samplingPoints {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $spacing-sm;
+  margin-top: $spacing-sm;
+}
+
+.pointItem {
+  aspect-ratio: 1.2;
+  border-radius: $radius-md;
+  background: $color-bg-section;
+  border: 2rpx solid $color-divider;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  font-size: 22rpx;
+  color: $color-text-secondary;
+  transition: all 0.2s;
+}
+
+.pointSelected {
+  background: linear-gradient(135deg, rgba($color-primary, 0.12), rgba($color-primary-light, 0.08));
+  border-color: $color-primary;
+  color: $color-primary;
+  font-weight: 600;
+}
+
+.pointIcon {
+  font-size: 32rpx;
+}
+
+.submitBar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  padding: $spacing-md $spacing-lg;
+  padding-bottom: calc($spacing-lg + env(safe-area-inset-bottom));
+  display: flex;
+  gap: $spacing-sm;
+  box-shadow: 0 -4rpx 20rpx rgba(0, 0, 0, 0.06);
+  z-index: 99;
+}
+
+.submitBtn {
+  @include button-reset;
+  flex: 1;
+  height: $button-height-lg;
+  border-radius: $radius-button;
+  font-size: $font-size-lg;
+  font-weight: $font-weight-bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  &:active { opacity: 0.9; }
+}
+
+.btnSave {
+  background: $color-bg-section;
+  color: $color-text-secondary;
+  flex: 0.7;
+}
+
+.btnSubmit {
+  background: linear-gradient(135deg, $color-primary, $color-primary-light);
+  color: #fff;
+}
+
+.previewCode {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $spacing-md;
+  background: $color-bg-section;
+  border-radius: $radius-md;
+  padding: $spacing-md;
+  margin-top: $spacing-sm;
+}
+
+.qrBox {
+  width: 140rpx;
+  height: 140rpx;
+  background: repeating-linear-gradient(
+    45deg,
+    #1D2129,
+    #1D2129 6rpx,
+    #fff 6rpx,
+    #fff 12rpx,
+    #1D2129 12rpx
+  );
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.codeInfo {
+  flex: 1;
+  .codeNo {
+    font-size: $font-size-md;
+    font-weight: $font-weight-bold;
+    color: $color-text-primary;
+    letter-spacing: 1rpx;
+  }
+  .codeTip {
+    font-size: 20rpx;
+    color: $color-text-tertiary;
+    margin-top: 6rpx;
+  }
+}

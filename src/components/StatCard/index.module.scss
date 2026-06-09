@@ -1,0 +1,71 @@
+@use '@/styles/variables.scss' as *;
+
+.card {
+  background-color: $color-bg-card;
+  border-radius: $radius-lg;
+  padding: $spacing-lg;
+  box-shadow: $shadow-card;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  transition: all $transition-base;
+  &:active {
+    transform: scale(0.98);
+  }
+}
+
+.valueRow {
+  display: flex;
+  align-items: baseline;
+  margin-bottom: $spacing-xs;
+}
+
+.value {
+  font-size: $font-size-xxl;
+  font-weight: $font-weight-bold;
+  line-height: 1.2;
+}
+
+.unit {
+  font-size: $font-size-sm;
+  font-weight: $font-weight-medium;
+  margin-left: $spacing-xs;
+}
+
+.label {
+  font-size: $font-size-sm;
+  color: $color-text-secondary;
+  line-height: 1.4;
+}
+
+.subLabel {
+  font-size: $font-size-xs;
+  color: $color-text-tertiary;
+  margin-top: 4rpx;
+  line-height: 1.4;
+}
+
+.colorPrimary {
+  .value, .unit { color: $color-primary; }
+  border-left: 6rpx solid $color-primary;
+}
+
+.colorSuccess {
+  .value, .unit { color: $color-success; }
+  border-left: 6rpx solid $color-success;
+}
+
+.colorWarning {
+  .value, .unit { color: $color-warning; }
+  border-left: 6rpx solid $color-warning;
+}
+
+.colorError {
+  .value, .unit { color: $color-error; }
+  border-left: 6rpx solid $color-error;
+}
+
+.colorTrace {
+  .value, .unit { color: $color-trace; }
+  border-left: 6rpx solid $color-trace;
+}

@@ -1,0 +1,63 @@
+@use '@/styles/variables.scss' as *;
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  padding: $spacing-md 0;
+  min-height: 72rpx;
+}
+
+.hasDivider {
+  border-bottom: 1rpx solid $color-divider;
+}
+
+.clickable {
+  &:active {
+    background-color: $color-bg-hover;
+    margin: 0 -$spacing-sm;
+    padding-left: $spacing-sm;
+    padding-right: $spacing-sm;
+  }
+}
+
+.label {
+  width: 200rpx;
+  flex-shrink: 0;
+  font-size: $font-size-sm;
+  color: $color-text-tertiary;
+  line-height: 1.6;
+  padding-right: $spacing-sm;
+}
+
+.valueWrap {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44rpx;
+}
+
+.value {
+  font-size: $font-size-sm;
+  color: $color-text-primary;
+  line-height: 1.6;
+  text-align: right;
+  word-break: break-all;
+}
+
+.highlight {
+  color: $color-text-primary;
+  font-weight: $font-weight-medium;
+}
+
+.colorPrimary { color: $color-primary !important; }
+.colorSuccess { color: $color-success !important; }
+.colorWarning { color: $color-warning !important; }
+.colorError { color: $color-error !important; }
+
+.arrow {
+  margin-left: $spacing-xs;
+  color: $color-text-tertiary;
+  font-size: $font-size-lg;
+  line-height: 1;
+}
